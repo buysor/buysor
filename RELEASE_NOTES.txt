@@ -1,0 +1,39 @@
+BUYSOR RELEASE V3 — targeted fix
+
+BASE
+- Built from the user-provided buysor-site-backup-2026-09-09.zip.
+- Existing home visual system is preserved. No replacement landing-page template.
+
+REQUESTED CHANGES ONLY
+1. BUY / WAIT / SKIP cards are informational and no longer clickable.
+2. Two explicit start modes at the top of the decision studio:
+   - Lens: photo / screenshot / link / product name
+   - Category: choose a product category, then continue to user conditions
+3. Header includes Category and Guide without adding a large homepage category matrix.
+4. Category chooser is modal/search based and only appears when requested.
+5. Login starts signed-out via a new v3 session cookie.
+6. ChatGPT profile full name is never displayed automatically.
+7. Hosted site login uses the secure hosted identity flow and offers Google account continuation on that screen.
+8. Localhost no longer sends users to /signin-with-chatgpt (which caused a 404).
+   - Localhost shows a local account test form instead.
+   - This UI is only visible on 127.0.0.1/localhost.
+9. Attendance + credits use a one-time launch clean-slate marker for existing test accounts.
+10. Roulette:
+    - symmetric 4-quadrant visual wheel
+    - 1C 95%, 2C 4%, 5C 0.9%, 10C 0.1% server-side odds
+    - duplicate/day race protection remains server-side
+    - KST clock updates every second
+    - KST date refreshes at midnight
+11. Release UI contains no beta/preview/development banner.
+12. Guide page added.
+
+LOCAL RUN
+- Double-click 00_START_BUYSOR.cmd
+- Keep the minimized server window open.
+- Stop with 00_STOP_BUYSOR.cmd
+
+VALIDATION
+- 91 TS/TSX files syntax-transpiled: 0 syntax errors.
+- CSS brace balance: passed.
+- Static internal href/action route check: 0 missing routes.
+- Full production build was not completed in this environment because dependency installation timed out before all packages were available.

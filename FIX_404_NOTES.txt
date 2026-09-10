@@ -1,0 +1,15 @@
+BUYSOR RELEASE V3.1 - local login 404 hotfix
+
+Changed only local/hosted environment detection for auth.
+
+Root cause:
+- The launcher correctly set BUYSOR_LOCAL_PREVIEW=1.
+- The app ignored that flag and relied only on the Host header.
+- vinext/Cloudflare dev mode may rewrite Host, so localhost was misclassified as hosted.
+- The login page then linked to /signin-with-chatgpt, a hosted Sites route that does not exist on 127.0.0.1, causing 404.
+
+Fix:
+- BUYSOR_LOCAL_PREVIEW=1 now always forces local auth mode.
+- Host and x-forwarded-host are only fallbacks.
+- Local login never navigates to /signin-with-chatgpt.
+- No homepage/category/Lens/roulette/design files were changed in this hotfix.

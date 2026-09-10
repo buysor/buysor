@@ -1,0 +1,9 @@
+BUYSOR V4.1 targeted roulette fix
+
+Only roulette behavior/pointer and local preview reset changed from V4.
+- Pointer now always points DOWN into the wheel.
+- Wheel spin uses the Web Animations API, not a CSS transition, so it visibly rotates for 3.4s and lands on the server-selected reward.
+- 6 full rotations before landing.
+- Local preview attendance cookie bumped to v4 so this package starts at 0 days and can be tested once.
+- Production/live attendance data is NOT reset by this local cookie change.
+- Reward odds unchanged: 1C 50%, 2C 25%, 3C 15%, 4C 9%, 5C 0.9%, 10C 0.1%.

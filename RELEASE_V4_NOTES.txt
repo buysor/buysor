@@ -1,0 +1,42 @@
+BUYSOR RELEASE V4 - TARGETED UX FIX
+2026-09-10
+
+This build starts from BUYSOR RELEASE V3.2 and changes only the requested areas.
+
+1) Daily wheel
+- Six rewards: 1C / 2C / 3C / 4C / 5C / 10C
+- Server-side odds: 50% / 25% / 15% / 9% / 0.9% / 0.1%
+- 5C and 10C odds are unchanged from the prior policy.
+- No losing result.
+- Six equal visual wedges with strong separators and clearly different colors.
+- Actual odds are intentionally separate from the visual wedge sizes.
+- Spin bug fixed by applying the transition state before changing rotation on a later animation frame.
+- The wheel now makes five full turns and lands on the server-selected reward.
+- Local attendance cookie bumped to a new version so local test attendance starts clean again.
+
+2) Category UX
+- Replaced flat tag wall with 3-level drill-down:
+  Major category -> Category -> Product type.
+- Search remains available for users who already know the product type.
+- Category is still only a search scope; user context drives the final decision.
+
+3) Home
+- Removed the full DecisionStudio input form from the home page so Home no longer looks like Lens/Category.
+- Added a 3-second hook explaining BUYSOR's core difference.
+- Added a visual decision flow and a conceptual comparison between ordinary recommendation/search and BUYSOR.
+- Kept BUY/WAIT/SKIP and personal-context signals.
+- No fake metrics, users, reviews or market statistics were added.
+
+4) Unchanged
+- Header structure and main routes
+- Lens page flow
+- Advisor flow
+- Login implementation from V3.2
+- Guide, My BUYSOR and attendance data model
+- Monthly bonus cap and milestone policy
+
+Run on Windows:
+1. Extract the ZIP fully.
+2. Double-click 00_START_BUYSOR.cmd.
+3. Keep the minimized BUYSOR SERVER window running.
+4. Use 00_STOP_BUYSOR.cmd when finished.

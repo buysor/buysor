@@ -1,0 +1,17 @@
+BUYSOR RELEASE V3.2 - LOCAL ATTENDANCE FIX
+
+Only the local preview attendance/credit backend was changed.
+No homepage, category, Lens, BUY/WAIT/SKIP, roulette UI, typography or layout changes.
+
+Cause:
+- Local preview has no Cloudflare D1 binding.
+- /api/attendance always called the D1-backed production code.
+- Result: 503 and "출석 기록을 불러오지 못했습니다."
+
+Fix:
+- Local preview now uses an HTTP-only, account-scoped cookie backend.
+- Starts at 0 attendance / 0 credits.
+- A real local wheel spin records exactly one attendance for the KST date.
+- Duplicate POST/refresh does not create another record.
+- Monthly 30C cap, streak and wheel odds mirror production logic.
+- Production path still uses the existing D1 backend unchanged.

@@ -8,20 +8,21 @@ export type ChatGPTUser = {
   fullName: string | null;
 };
 
-const USER_ID_HEADER = "oai-authenticated-user-id";
-const USER_EMAIL_HEADER = "oai-authenticated-user-email";
-const USER_FULL_NAME_HEADER = "oai-authenticated-user-full-name";
-const USER_FULL_NAME_ENCODING_HEADER = "oai-authenticated-user-full-name-encoding";
-const PERCENT_ENCODED_UTF8 = "percent-encoded-utf-8";
-const SIGN_IN_PATH = "/signin-with-chatgpt";
-const SIGN_OUT_PATH = "/signout-with-chatgpt";
-const CALLBACK_PATH = "/callback";
+type SessionPayload = ChatGPTUser & {
+  exp: number;
+};
+
 const APP_SESSION_COOKIE = "buysor-authenticated-v3";
 const LOCAL_EMAIL_COOKIE = "buysor-local-email";
 
+const SIGN_IN_PATH = "/auth/start";
+const SIGN_OUT_PATH = "/auth/logout";
+const CALLBACK_PATH = "/auth/complete";
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
 export async function isLocalRequest() {
-  // The local launcher sets this explicitly. vinext/Cloudflare dev mode can
-  // rewrite the Host header, so Host-only detection is not reliable.
   if (process.env.BUYSOR_LOCAL_PREVIEW === "1") return true;
 
   const requestHeaders = await headers();
@@ -39,11 +40,42 @@ export async function isLocalRequest() {
   );
 }
 
+export async function createGoogleSessionToken(
+  user: ChatGPTUser,
+): Promise<string> {
+  const secret = getSessionSecret();
+
+  const payload: SessionPayload = {
+    ...user,
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+  };
+
+  const encodedPayload = base64UrlEncode(
+    encoder.encode(JSON.stringify(payload)),
+  );
+
+  const key = await importHmacKey(secret);
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(encodedPayload),
+  );
+
+  return `${encodedPayload}.${base64UrlEncode(new Uint8Array(signature))}`;
+}
+
 export async function getChatGPTIdentity(): Promise<ChatGPTUser | null> {
+  const cookieStore = await cookies();
+
   if (await isLocalRequest()) {
-    const cookieStore = await cookies();
-    const email = cookieStore.get(LOCAL_EMAIL_COOKIE)?.value?.trim().toLowerCase();
+    const email = cookieStore
+      .get(LOCAL_EMAIL_COOKIE)
+      ?.value?.trim()
+      .toLowerCase();
+
     if (!email) return null;
+
     return {
       id: `local:${email}`,
       displayName: email,
@@ -52,47 +84,46 @@ export async function getChatGPTIdentity(): Promise<ChatGPTUser | null> {
     };
   }
 
-  const requestHeaders = await headers();
-  const id = requestHeaders.get(USER_ID_HEADER);
-  const email = requestHeaders.get(USER_EMAIL_HEADER);
-  if (!id || !email) return null;
+  const token = cookieStore.get(APP_SESSION_COOKIE)?.value;
+  if (!token) return null;
 
-  const encodedFullName = requestHeaders.get(USER_FULL_NAME_HEADER);
-  const fullName = encodedFullName && requestHeaders.get(USER_FULL_NAME_ENCODING_HEADER) === PERCENT_ENCODED_UTF8
-    ? safeDecodeURIComponent(encodedFullName)
-    : null;
-
-  return {
-    id,
-    displayName: email,
-    email,
-    fullName,
-  };
+  return verifySessionToken(token);
 }
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
-  const cookieStore = await cookies();
-  if (cookieStore.get(APP_SESSION_COOKIE)?.value !== "1") return null;
   return getChatGPTIdentity();
 }
 
-export async function requireChatGPTUser(returnTo: string): Promise<ChatGPTUser> {
+export async function requireChatGPTUser(
+  returnTo: string,
+): Promise<ChatGPTUser> {
   const user = await getChatGPTUser();
+
   if (user) return user;
-  redirect(`/login?return_to=${encodeURIComponent(safeRelativeReturnPath(returnTo))}`);
+
+  redirect(
+    `/login?return_to=${encodeURIComponent(
+      safeRelativeReturnPath(returnTo),
+    )}`,
+  );
 }
 
 export function chatGPTSignInPath(returnTo: string): string {
-  const safeReturnTo = safeRelativeReturnPath(returnTo);
-  return `${SIGN_IN_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
+  return `${SIGN_IN_PATH}?return_to=${encodeURIComponent(
+    safeRelativeReturnPath(returnTo),
+  )}`;
 }
 
 export function chatGPTSignOutPath(returnTo = "/"): string {
-  const safeReturnTo = safeRelativeReturnPath(returnTo);
-  return `${SIGN_OUT_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
+  return `${SIGN_OUT_PATH}?return_to=${encodeURIComponent(
+    safeRelativeReturnPath(returnTo),
+  )}`;
 }
 
-export function safeReturnPath(value: string | null | undefined, fallback = "/"): string {
+export function safeReturnPath(
+  value: string | null | undefined,
+  fallback = "/",
+): string {
   if (!value) return fallback;
   return safeRelativeReturnPath(value);
 }
@@ -120,27 +151,136 @@ export const buysorLocalEmailCookie = {
   },
 };
 
+async function verifySessionToken(
+  token: string,
+): Promise<ChatGPTUser | null> {
+  try {
+    const [payloadPart, signaturePart, extra] = token.split(".");
+
+    if (!payloadPart || !signaturePart || extra) return null;
+
+    const key = await importHmacKey(getSessionSecret());
+
+    const valid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      base64UrlDecode(signaturePart),
+      encoder.encode(payloadPart),
+    );
+
+    if (!valid) return null;
+
+    const payload = JSON.parse(
+      decoder.decode(base64UrlDecode(payloadPart)),
+    ) as SessionPayload;
+
+    if (
+      typeof payload.id !== "string" ||
+      typeof payload.email !== "string" ||
+      typeof payload.displayName !== "string" ||
+      typeof payload.exp !== "number"
+    ) {
+      return null;
+    }
+
+    if (payload.exp <= Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+
+    return {
+      id: payload.id,
+      email: payload.email.toLowerCase(),
+      displayName: payload.displayName,
+      fullName:
+        typeof payload.fullName === "string"
+          ? payload.fullName
+          : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getSessionSecret(): string {
+  const secret = process.env.AUTH_SESSION_SECRET;
+
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "AUTH_SESSION_SECRET must be configured and at least 32 characters.",
+    );
+  }
+
+  return secret;
+}
+
+async function importHmacKey(secret: string): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    {
+      name: "HMAC",
+      hash: "SHA-256",
+    },
+    false,
+    ["sign", "verify"],
+  );
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function base64UrlDecode(value: string): Uint8Array {
+  const normalized = value
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const padded =
+    normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+
+  const binary = atob(padded);
+  const result = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i += 1) {
+    result[i] = binary.charCodeAt(i);
+  }
+
+  return result;
+}
+
 function safeRelativeReturnPath(value: string): string {
   if (!value.startsWith("/") || value.startsWith("//")) return "/";
+
   let url: URL;
+
   try {
     url = new URL(value, "https://app.local");
   } catch {
     return "/";
   }
+
   if (url.origin !== "https://app.local") return "/";
   if (isReservedAuthPath(url.pathname)) return "/";
+
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
 function isReservedAuthPath(pathname: string): boolean {
-  return pathname === SIGN_IN_PATH || pathname === SIGN_OUT_PATH || pathname === CALLBACK_PATH;
-}
-
-function safeDecodeURIComponent(value: string): string | null {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return null;
-  }
+  return (
+    pathname === SIGN_IN_PATH ||
+    pathname === SIGN_OUT_PATH ||
+    pathname === CALLBACK_PATH ||
+    pathname === "/signin-with-chatgpt" ||
+    pathname === "/signout-with-chatgpt" ||
+    pathname === "/callback"
+  );
 }

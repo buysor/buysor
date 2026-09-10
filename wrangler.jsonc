@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "buysor",
+  "compatibility_date": "2026-09-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./worker/index.ts",
+
+  "assets": {
+    "not_found_handling": "none",
+    "binding": "ASSETS"
+  },
+
+  "images": {
+    "binding": "IMAGES"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "buysor-db",
+      "database_id": "5577abb8-f611-41c2-b84d-bbda46c8adae",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}

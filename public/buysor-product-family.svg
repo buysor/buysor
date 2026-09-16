@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="92" y1="50" x2="1110" y2="650" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8F8FA"/>
+      <stop offset="1" stop-color="#EEF1F6"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FCFCFD"/>
+      <stop offset="0.48" stop-color="#D9DCE3"/>
+      <stop offset="1" stop-color="#AEB4C0"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0C1426"/>
+      <stop offset="0.55" stop-color="#173A77"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#182234"/>
+      <stop offset="0.5" stop-color="#475569"/>
+      <stop offset="1" stop-color="#0E1727"/>
+    </linearGradient>
+    <linearGradient id="tool" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0B1220"/>
+      <stop offset="0.58" stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientTransform="translate(600 330) rotate(90) scale(280 500)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.98"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="26" flood-color="#64748B" flood-opacity="0.22"/>
+    </filter>
+    <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#64748B" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="680" rx="52" fill="url(#bg)"/>
+  <ellipse cx="600" cy="348" rx="510" ry="290" fill="url(#halo)"/>
+  <path d="M137 537C319 494 852 483 1066 537" stroke="#D9DEE8" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Laptop / electronics -->
+  <g filter="url(#shadow)">
+    <rect x="112" y="195" width="402" height="248" rx="26" fill="url(#metal)" stroke="#9AA3B2" stroke-width="2"/>
+    <rect x="128" y="211" width="370" height="216" rx="17" fill="url(#screen)"/>
+    <path d="M154 236C217 196 322 197 464 251" stroke="white" stroke-opacity="0.18" stroke-width="18" stroke-linecap="round"/>
+    <circle cx="313" cy="204" r="3" fill="#606B7C"/>
+    <path d="M73 447H553L517 484H111L73 447Z" fill="url(#metal)" stroke="#9CA3AF" stroke-width="2"/>
+    <rect x="259" y="453" width="108" height="8" rx="4" fill="#9CA3AF" fill-opacity="0.58"/>
+  </g>
+
+  <!-- Washing machine / appliance -->
+  <g filter="url(#shadow)">
+    <rect x="484" y="142" width="292" height="396" rx="40" fill="url(#metal)" stroke="#A7AEB9" stroke-width="2"/>
+    <rect x="510" y="170" width="240" height="58" rx="18" fill="#F7F8FA" stroke="#B7BEC8"/>
+    <circle cx="716" cy="199" r="12" fill="#131A27"/>
+    <circle cx="682" cy="199" r="7" fill="#CBD1DA"/>
+    <rect x="532" y="189" width="94" height="12" rx="6" fill="#C9CFD8"/>
+    <circle cx="630" cy="371" r="112" fill="#AEB6C2"/>
+    <circle cx="630" cy="371" r="94" fill="url(#glass)"/>
+    <circle cx="630" cy="371" r="73" fill="#111827"/>
+    <path d="M570 344C594 305 662 292 700 326" stroke="#7EA7FF" stroke-opacity="0.42" stroke-width="12" stroke-linecap="round"/>
+    <path d="M557 391C598 422 670 427 709 391" stroke="#93C5FD" stroke-opacity="0.32" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <!-- Cordless drill / power tool -->
+  <g filter="url(#softShadow)" transform="translate(812 214) rotate(-7 148 146)">
+    <path d="M38 44C38 25 53 10 72 10H220C243 10 262 29 262 52V112C262 128 249 141 233 141H122L111 180H69L76 137H67C51 137 38 124 38 108V44Z" fill="url(#tool)"/>
+    <path d="M262 60H316C329 60 340 71 340 84V102C340 115 329 126 316 126H262V60Z" fill="#AEB7C4"/>
+    <rect x="318" y="72" width="74" height="42" rx="12" fill="#515A67"/>
+    <path d="M115 132H170L198 286C201 304 188 320 170 320H104C87 320 74 304 77 287L115 132Z" fill="#111827"/>
+    <path d="M105 211H188L195 252H95L105 211Z" fill="#2563EB"/>
+    <rect x="72" y="301" width="136" height="54" rx="15" fill="#0F172A"/>
+    <rect x="87" y="313" width="106" height="15" rx="7.5" fill="#334155"/>
+    <path d="M58 36H108" stroke="#7EA7FF" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="211" cy="78" r="19" fill="#0B1220" stroke="#5B8EFF" stroke-width="5"/>
+  </g>
+
+  <!-- subtle scan accents -->
+  <path d="M75 129H218" stroke="#2563EB" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="228" cy="129" r="4" fill="#2563EB"/>
+  <path d="M983 121H1124" stroke="#2563EB" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="972" cy="121" r="4" fill="#2563EB"/>
+  <path d="M547 590H654" stroke="#2563EB" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="536" cy="590" r="4" fill="#2563EB"/>
+</svg>

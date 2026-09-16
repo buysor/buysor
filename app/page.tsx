@@ -58,7 +58,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className={styles.lensArtwork} aria-label={ko ? "BUYSOR Lens 구매 판단 예시" : "BUYSOR Lens decision example"}>
+          <div className={styles.lensArtwork} aria-label={ko ? "BUYSOR Lens 분석 흐름" : "BUYSOR Lens analysis flow"}>
             <div className={styles.artGlow} aria-hidden="true" />
             <div className={styles.viewfinder} aria-hidden="true">
               <i className={styles.cornerA} />
@@ -78,12 +78,27 @@ export default function Home() {
               <strong>{ko ? "제품을 보고, 당신까지 봅니다." : "See the product. Understand the person."}</strong>
             </div>
 
-            <div className={styles.decisionReadout}>
-              <div>
-                <span>{ko ? "현재 판단" : "CURRENT DECISION"}</span>
-                <strong>WAIT</strong>
+            <div className={styles.lensStatus}>
+              <div className={styles.statusTitle}>
+                <Camera size={18} />
+                <div>
+                  <span>{ko ? "사진을 넣으면" : "WHEN YOU ADD A PHOTO"}</span>
+                  <strong>{ko ? "제품 인식부터 시작합니다." : "Product recognition starts here."}</strong>
+                </div>
               </div>
-              <p>{ko ? "지금 제품으로 버틸 수 있음 · 가격 변동 가능성 있음" : "Current device is still usable · price may move"}</p>
+              <div className={styles.statusChips}>
+                <span>{ko ? "제품 식별" : "Product"}</span>
+                <span>{ko ? "가격" : "Price"}</span>
+                <span>{ko ? "상태" : "Condition"}</span>
+                <span>{ko ? "주변 단서" : "Context"}</span>
+              </div>
+              <div className={styles.statusFlow}>
+                <b>{ko ? "제품 정보" : "PRODUCT"}</b>
+                <i>+</i>
+                <b>USER MODEL</b>
+                <i>→</i>
+                <strong>{ko ? "구매 판단" : "DECISION"}</strong>
+              </div>
             </div>
           </div>
         </section>

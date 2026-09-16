@@ -1,9 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowRight, CalendarDays, Camera, Coins, Flame, LoaderCircle, LockKeyhole, UserRound } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowRight,
+  CalendarDays,
+  Camera,
+  CheckCircle2,
+  Coins,
+  Flame,
+  LoaderCircle,
+  LockKeyhole,
+  UserRound,
+} from "lucide-react";
 import { PreferencesPanel } from "@/components/preferences-panel";
 import { usePreferences } from "@/components/preferences-provider";
+import type { DecisionHistoryItem, SubscriptionTier, UserModelPayload } from "@/lib/buysor-types";
 
 type Summary = {
   checkedToday: boolean;
@@ -13,76 +24,113 @@ type Summary = {
   nextMilestone: number | null;
 };
 
+type LoadState = "loading" | "ready" | "error";
+
 export function DashboardClient() {
   const { language } = usePreferences();
   const ko = language === "ko";
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [profile, setProfile] = useState<UserModelPayload | null>(null);
+  const [history, setHistory] = useState<DecisionHistoryItem[]>([]);
+  const [tier, setTier] = useState<SubscriptionTier>("essential");
+  const [state, setState] = useState<LoadState>("loading");
 
   useEffect(() => {
-    fetch("/api/attendance", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("summary unavailable");
-        return response.json() as Promise<Summary>;
-      })
-      .then(setSummary)
-      .catch(() => setSummary(null))
-      .finally(() => setLoaded(true));
+    let active = true;
+    async function load() {
+      const settled = await Promise.allSettled([
+        fetch("/api/attendance", { cache: "no-store" }).then(async (response) => response.ok ? response.json() as Promise<Summary> : null),
+        fetch("/api/profile", { cache: "no-store" }).then(async (response) => response.ok ? response.json() as Promise<UserModelPayload> : null),
+        fetch("/api/decision?limit=6", { cache: "no-store" }).then(async (response) => response.ok ? response.json() as Promise<{items: DecisionHistoryItem[]}> : { items: [] }),
+        fetch("/api/subscription", { cache: "no-store" }).then(async (response) => response.json() as Promise<{tier?: SubscriptionTier}>),
+      ]);
+      if (!active) return;
+      if (settled[0].status === "fulfilled") setSummary(settled[0].value);
+      if (settled[1].status === "fulfilled") setProfile(settled[1].value);
+      if (settled[2].status === "fulfilled") setHistory(settled[2].value.items ?? []);
+      if (settled[3].status === "fulfilled" && settled[3].value.tier) setTier(settled[3].value.tier);
+      setState(settled.some((item) => item.status === "fulfilled") ? "ready" : "error");
+    }
+    void load();
+    return () => { active = false; };
   }, []);
+
+  const completed = useMemo(() => history.filter((item) => item.status === "completed"), [history]);
+  const recent = completed.slice(0, 4);
+  const profileCompletion = profile?.completion ?? 0;
+  const reportsUnlocked = tier === "plus" || tier === "premium";
 
   return (
     <div className="dashboard-grid">
       <a className="dashboard-primary" href="/lens">
         <div>
           <span className="section-kicker section-kicker--light"><Camera size={14} /> {ko ? "새 구매 판단" : "NEW DECISION"}</span>
-          <h2>{ko ? <>사진으로 바로<br />시작하세요.</> : <>Start with<br />a photo.</>}</h2>
-          <p>{ko ? "모델명을 몰라도 Lens가 제품 단서부터 찾습니다." : "Lens finds product clues even when you do not know the model."}</p>
+          <h2>{ko ? <>사진·링크·제품명으로<br />바로 시작.</> : <>Start from a photo,<br/>link or product.</>}</h2>
+          <p>{ko ? "Lens에서 제품을 입력하고 USER MODEL과 이번 구매 조건을 함께 판단합니다." : "Lens combines the product with your profile and current needs."}</p>
         </div>
-        <span className="dashboard-primary-action">{ko ? "Lens 열기" : "Open Lens"} <ArrowRight size={17} /></span>
+        <span className="dashboard-primary-action">{ko ? "구매 판단 시작" : "Start decision"} <ArrowRight size={17} /></span>
         <div className="dashboard-scan"><Camera size={48} /></div>
       </a>
 
       <article className="stat-card credit-card">
         <span><Coins size={18} /> {ko ? "사용 가능한 보너스" : "Bonus credits"}</span>
-        {summary ? <strong>{summary.bonusCredits}<small>C</small></strong> : loaded ? <strong>—</strong> : <LoaderCircle className="spin" size={25} />}
-        <p>{summary ? (ko ? `이번 달 최대 ${summary.monthlyCap}C` : `${summary.monthlyCap}C monthly cap`) : loaded ? (ko ? "잔액을 확인할 수 없음" : "Balance unavailable") : (ko ? "실제 잔액 확인 중" : "Checking balance")}</p>
+        {summary ? <strong>{summary.bonusCredits}<small>C</small></strong> : state === "loading" ? <LoaderCircle className="spin" size={25} /> : <strong>—</strong>}
+        <p>{summary ? (ko ? `이번 달 최대 ${summary.monthlyCap}C` : `${summary.monthlyCap}C monthly cap`) : (ko ? "잔액을 확인할 수 없음" : "Balance unavailable")}</p>
       </article>
 
       <a className="stat-card streak-card" href="/attendance">
         <span><Flame size={18} /> {ko ? "연속 출석" : "Daily streak"}</span>
-        {summary ? <strong>{summary.streak}<small>일</small></strong> : loaded ? <strong>—</strong> : <LoaderCircle className="spin" size={25} />}
-        <p>{summary?.checkedToday ? (ko ? "오늘 룰렛 완료" : "Wheel completed") : loaded && !summary ? (ko ? "기록을 다시 확인" : "Check again") : (ko ? "오늘의 룰렛 돌리기" : "Spin today’s wheel")} <ArrowRight size={14} /></p>
+        {summary ? <strong>{summary.streak}<small>{ko ? "일" : " days"}</small></strong> : state === "loading" ? <LoaderCircle className="spin" size={25} /> : <strong>—</strong>}
+        <p>{summary?.checkedToday ? (ko ? "오늘 룰렛 완료" : "Wheel completed") : (ko ? "오늘의 룰렛 확인" : "Open today’s wheel")} <ArrowRight size={14} /></p>
       </a>
 
       <a className="stat-card" href="/profile">
-        <span><UserRound size={18} /> {ko ? "구매 프로필" : "Decision profile"}</span>
-        <strong>9<small>단계</small></strong>
-        <p>{ko ? "지금 내 상태 · 정밀 설문 이어가기" : "Continue profile and survey"} <ArrowRight size={14} /></p>
+        <span><UserRound size={18} /> {ko ? "USER MODEL" : "USER MODEL"}</span>
+        <strong>{profileCompletion}<small>%</small></strong>
+        <p>{profileCompletion > 0 ? (ko ? "현재 상태 · 정밀 프로필 이어가기" : "Continue your profile") : (ko ? "내 구매 기준 만들기" : "Build your purchase profile")} <ArrowRight size={14} /></p>
       </a>
 
       <a className="stat-card" href="/reports/weekly">
         <span><CalendarDays size={18} /> {ko ? "주간 리포트" : "Weekly report"}</span>
-        <strong><LockKeyhole size={34} /></strong>
-        <p>{ko ? "월 구독 전용 · 잠금 미리보기" : "Monthly subscription · preview"} <ArrowRight size={14} /></p>
+        <strong>{reportsUnlocked ? <CheckCircle2 size={34}/> : <LockKeyhole size={34} />}</strong>
+        <p>{reportsUnlocked ? (ko ? `${tier === "premium" ? "Premium" : "Plus"} · 최근 7일 실제 기록` : "Real 7-day report") : (ko ? "Plus부터 사용 가능" : "Available from Plus")} <ArrowRight size={14} /></p>
       </a>
 
       <a className="stat-card" href="/reports/monthly">
         <span><CalendarDays size={18} /> {ko ? "월간 리포트" : "Monthly report"}</span>
-        <strong><LockKeyhole size={34} /></strong>
-        <p>{ko ? "성향 변화 · 만족도 · 구매 계획" : "Trends, satisfaction, purchase plan"} <ArrowRight size={14} /></p>
+        <strong>{reportsUnlocked ? <CheckCircle2 size={34}/> : <LockKeyhole size={34} />}</strong>
+        <p>{reportsUnlocked ? (ko ? "최근 30일 패턴 · 재확인 큐" : "30-day patterns and rechecks") : (ko ? "Plus부터 사용 가능" : "Available from Plus")} <ArrowRight size={14} /></p>
       </a>
 
       <article className="empty-card profile-card">
         <div><span className="section-kicker">MY DECISION PROFILE</span><h2>바이저가 이해하는 나</h2></div>
-        <div className="empty-state"><span>구매 기준을 직접 채워보세요.</span><p>현재 상황과 정밀 프로필이 쌓이면 예산, 용도, 선호, 보유 제품, 미래 계획을 다음 판단에 반영합니다. <a href="/profile">프로필 설정 →</a></p></div>
+        {profileCompletion > 0 ? (
+          <div className="empty-state">
+            <span>USER MODEL {profileCompletion}% 완성</span>
+            <p>{profile?.structuredState?.painPoint ? `최근 상태: ${profile.structuredState.painPoint}. ` : ""}{Object.keys(profile?.survey ?? {}).length}개 프로필 답변이 다음 구매 판단에 반영됩니다. <a href="/profile">업데이트 →</a></p>
+          </div>
+        ) : (
+          <div className="empty-state"><span>아직 구매 기준이 비어 있습니다.</span><p>현재 상황과 정밀 프로필을 채우면 매번 같은 설명을 반복하지 않아도 됩니다. <a href="/profile">프로필 설정 →</a></p></div>
+        )}
       </article>
 
       <article className="empty-card history-card">
         <div><span className="section-kicker">DECISION HISTORY</span><h2>최근 구매 결정</h2></div>
-        <div className="empty-state"><span>저장된 결정이 없습니다.</span><p>첫 구매 판단이 끝나면 결과와 근거를 다시 볼 수 있습니다.</p></div>
+        {recent.length ? (
+          <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
+            {recent.map((item) => <a href="/my" key={item.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 10, alignItems: "center", padding: 11, border: "1px solid var(--line)", borderRadius: 12, background: "var(--surface)" }}><b style={{ fontSize: 10, color: item.verdict === "BUY" ? "var(--green)" : item.verdict === "WAIT" ? "var(--amber)" : "var(--red)" }}>{item.verdict}</b><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12, fontWeight: 700 }}>{item.inputLabel}</span><small style={{ color: "var(--muted)", fontSize: 9 }}>{formatDate(item.createdAt)}</small></a>)}
+          </div>
+        ) : (
+          <div className="empty-state"><span>저장된 AI 구매 결정이 없습니다.</span><p>첫 판단을 완료하면 BUY · WAIT · SKIP 결과와 근거가 계정에 쌓입니다.</p></div>
+        )}
       </article>
 
       <PreferencesPanel />
     </div>
   );
+}
+
+function formatDate(value: number) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric" }).format(new Date(value));
 }

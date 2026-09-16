@@ -31,11 +31,23 @@ export default function Home() {
         <section className={styles.hero}>
           <div className={styles.heroText}>
             <span className={styles.productName}>BUYSOR</span>
-            <h1>{ko ? <>사진 한 장이면,<br />구매 결정 끝.</> : <>One photo.<br />Decision done.</>}</h1>
+            <h1>
+              {ko ? (
+                <>
+                  <span className={styles.heroTitleLine}>사진 한 장이면</span>
+                  <span className={styles.heroTitleLine}>구매 고민 끝.</span>
+                </>
+              ) : (
+                <>
+                  <span className={styles.heroTitleLine}>One photo.</span>
+                  <span className={styles.heroTitleLine}>Decision done.</span>
+                </>
+              )}
+            </h1>
             <p>
               {ko
-                ? "제품만 추천하지 않습니다. 당신의 예산·용도·보유 제품·구매 시점까지 보고 지금 사야 하는지부터 판단합니다."
-                : "BUYSOR does not just recommend products. It considers your budget, use, current gear and timing before deciding whether you should buy at all."}
+                ? "전자제품·가전·전동공구까지. 사진이나 링크, 제품명으로 시작하면 제품 정보와 당신의 상황을 함께 보고 BUY · WAIT · SKIP부터 판단합니다."
+                : "Electronics, appliances and power tools. Start with a photo, link or product name and BUYSOR combines product information with your situation to decide BUY · WAIT · SKIP first."}
             </p>
             <div className={styles.heroActions}>
               <a className={styles.primary} href="/lens"><Camera size={17} /> {ko ? "사진으로 시작하기" : "Start with a photo"}</a>
@@ -44,7 +56,19 @@ export default function Home() {
           </div>
 
           <div className={styles.heroVisual}>
-            <img src="/buysor-lens-stage.svg" alt={ko ? "BUYSOR Lens를 상징하는 렌즈 비주얼" : "BUYSOR Lens visual"} />
+            <img src="/buysor-product-family.svg" alt={ko ? "전자제품, 가전, 전동공구를 함께 보여주는 BUYSOR 대표 이미지" : "BUYSOR hero showing electronics, appliances and power tools"} />
+            <div className={styles.visualLegend} aria-label={ko ? "지원 카테고리" : "Supported categories"}>
+              <span>{ko ? "전자제품" : "Electronics"}</span>
+              <span>{ko ? "가전" : "Appliances"}</span>
+              <span>{ko ? "전동공구" : "Power tools"}</span>
+            </div>
+            <div className={styles.visualFlow}>
+              <span>{ko ? "제품 정보" : "PRODUCT"}</span>
+              <i>+</i>
+              <span>USER MODEL</span>
+              <i>→</i>
+              <strong>{ko ? "구매 판단" : "DECISION"}</strong>
+            </div>
           </div>
         </section>
 
@@ -52,7 +76,7 @@ export default function Home() {
           <div className={styles.methodCopy}>
             <span>{ko ? "모델명을 몰라도 됩니다." : "NO MODEL NAME REQUIRED"}</span>
             <h2>{ko ? "보여주거나, 붙여넣거나, 그냥 적으세요." : "Show it, paste it, or type it."}</h2>
-            <p>{ko ? "입력 방식은 다르지만 판단 방식은 같습니다. 제품 정보와 USER MODEL을 함께 봅니다." : "Different inputs, same decision engine. Product information is combined with your USER MODEL."}</p>
+            <p>{ko ? "입력 방식은 달라도 판단 방식은 같습니다. 제품 정보와 USER MODEL을 함께 봅니다." : "Different inputs, same decision engine. Product information is combined with your USER MODEL."}</p>
           </div>
 
           <div className={styles.methodLinks}>

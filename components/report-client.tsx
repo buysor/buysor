@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { LockKeyhole, Sparkles } from "lucide-react";
 import styles from "./buysor-features.module.css";
 
@@ -20,15 +21,22 @@ const monthly = {
 export function ReportClient({ type, unlocked = false }: ReportClientProps) {
   const data = type === "weekly" ? weekly : monthly;
   const isMonthly = type === "monthly";
+  const [memberPreview, setMemberPreview] = useState(unlocked);
+
   return (
     <div className={styles.reportPage}>
       <section className={styles.reportHero}>
         <div><span className="section-kicker">{isMonthly ? "MONTHLY REPORT" : "WEEKLY REPORT"}</span><h1>{isMonthly ? "월간 리포트" : "주간 리포트"}</h1></div>
-        <p>{isMonthly ? "한 달의 구매 판단, 실제 구매, 만족도, 성향 변화를 묶어 다음 달 결정을 준비합니다." : "이번 주에 무엇을 고민했고 왜 기다렸는지, 다시 확인할 결정이 무엇인지 정리합니다."}</p>
+        <div>
+          <p>{isMonthly ? "한 달의 구매 판단, 실제 구매, 만족도, 성향 변화를 묶어 다음 달 결정을 준비합니다." : "이번 주에 무엇을 고민했고 왜 기다렸는지, 다시 확인할 결정이 무엇인지 정리합니다."}</p>
+          <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+            <button className={styles.secondaryButton} type="button" onClick={() => setMemberPreview((value) => !value)}>{memberPreview ? "무료 잠금 화면 보기" : "구독자 화면 직접 보기"}</button>
+          </div>
+        </div>
       </section>
 
       <section className={styles.reportShell}>
-        <div className={styles.reportContent} data-locked={!unlocked}>
+        <div className={styles.reportContent} data-locked={!memberPreview}>
           <div className={styles.reportTopStats}>{data.metrics.map(([label, value, note]) => <div className={styles.metric} key={label}><span>{label}</span><strong>{value}</strong><b>{note}</b></div>)}</div>
           <div className={styles.reportGrid}>
             <article className={styles.reportCard}><h2>{isMonthly ? "지난달 대비 구매 성향 변화" : "이번 주 가장 많이 고민한 카테고리"}</h2><div className={styles.barList}>{data.bars.map(([label, width, note]) => <div className={styles.barItem} key={String(label)}><span>{label}</span><div className={styles.bar}><span style={{width:`${width}%`}}/></div><strong>{note}</strong></div>)}</div></article>
@@ -40,9 +48,9 @@ export function ReportClient({ type, unlocked = false }: ReportClientProps) {
           </div>
         </div>
 
-        {!unlocked && <div className={styles.lockLayer}><div className={styles.lockCard}><div className={styles.lockIcon}><LockKeyhole size={22}/></div><h2>{isMonthly ? "월간 리포트" : "주간 리포트"}는 월 구독 전용입니다.</h2><p>무료 상태에서는 잠금 미리보기만 제공합니다. 실제 개인 리포트 데이터는 구독 권한을 확인한 사용자에게만 서버에서 전달되도록 구현할 예정입니다.</p><a href="/my"><Sparkles size={14}/> 내 바이저로 돌아가기</a></div></div>}
+        {!memberPreview && <div className={styles.lockLayer}><div className={styles.lockCard}><div className={styles.lockIcon}><LockKeyhole size={22}/></div><h2>{isMonthly ? "월간 리포트" : "주간 리포트"}는 월 구독 전용입니다.</h2><p>무료 상태에서는 잠금 미리보기만 제공합니다. 실제 개인 리포트 데이터는 구독 권한을 확인한 사용자에게만 서버에서 전달됩니다.</p><button className={styles.primaryButton} type="button" onClick={() => setMemberPreview(true)}><Sparkles size={14}/> 미리보기에서 구독자 화면 확인</button></div></div>}
       </section>
-      {unlocked && <div className={styles.memberNote}><Sparkles size={14}/> 구독 회원 화면 예시</div>}
+      {memberPreview && <div className={styles.memberNote}><Sparkles size={14}/> 구독 회원 화면 예시 · 실제 운영에서는 권한 확인 후 표시</div>}
     </div>
   );
 }

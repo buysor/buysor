@@ -46,13 +46,7 @@ export async function getUserProfile(user: ChatGPTUser): Promise<UserModelPayloa
     }>();
 
   if (!row) {
-    return {
-      stateText: "",
-      structuredState: null,
-      survey: {},
-      categoryProfiles: {},
-      completion: 0,
-    };
+    return { stateText: "", structuredState: null, survey: {}, categoryProfiles: {}, completion: 0 };
   }
 
   return {
@@ -121,16 +115,11 @@ export async function setSubscriptionTierForPreview(user: ChatGPTUser, tier: Sub
     .run();
 }
 
-export async function createPendingDecision(
-  user: ChatGPTUser,
-  draft: DecisionDraft,
-  answers: DecisionAnswers,
-) {
+export async function createPendingDecision(user: ChatGPTUser, draft: DecisionDraft, answers: DecisionAnswers) {
   await ensureUserRecord(user);
-  const db = getD1Binding();
   const id = crypto.randomUUID();
   const now = Date.now();
-  await db
+  await getD1Binding()
     .prepare(
       `INSERT INTO decisions
         (id, user_id, input_type, input_label, input_json, answers_json, status, category_id, subcategory_id, created_at, updated_at)
@@ -179,40 +168,15 @@ export async function listDecisionHistory(user: ChatGPTUser, limit = 20): Promis
        FROM decisions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
     )
     .bind(user.id, Math.min(100, Math.max(1, limit)))
-    .all<{
-      id: string;
-      input_type: DecisionHistoryItem["inputType"];
-      input_label: string;
-      category_id: string | null;
-      subcategory_id: string | null;
-      verdict: DecisionHistoryItem["verdict"];
-      status: DecisionHistoryItem["status"];
-      result_json: string | null;
-      created_at: number;
-    }>();
-
-  return (result.results ?? []).map((row) => ({
-    id: row.id,
-    createdAt: Number(row.created_at),
-    inputType: row.input_type,
-    inputLabel: row.input_label,
-    categoryId: row.category_id,
-    subcategoryId: row.subcategory_id,
-    verdict: row.verdict && ["BUY", "WAIT", "SKIP"].includes(row.verdict) ? row.verdict : null,
-    status: row.status,
-    result: parseJson<DecisionResult | null>(row.result_json, null),
-  }));
+    .all<Record<string, unknown>>();
+  return (result.results ?? []).map(toHistoryItem);
 }
 
-export async function getReportData(
-  user: ChatGPTUser,
-  period: "weekly" | "monthly",
-): Promise<ReportData> {
+export async function getReportData(user: ChatGPTUser, period: "weekly" | "monthly"): Promise<ReportData> {
   const tier = await getSubscriptionTier(user);
   const days = period === "weekly" ? 7 : 30;
-  const from = Date.now() - (days * DAY);
-  const history = await listDecisionsSince(user, from);
-  const completed = history.filter((item) => item.status === "completed");
+  const history = await listDecisionsSince(user, Date.now() - (days * DAY));
+  const completed = history.filter((item) => item.status === "completed" && item.result);
   const counts = {
     BUY: completed.filter((item) => item.verdict === "BUY").length,
     WAIT: completed.filter((item) => item.verdict === "WAIT").length,
@@ -228,27 +192,62 @@ export async function getReportData(
   const categoryBars = [...categories.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([label, count]) => ({ label, value: Math.round((count / maxCategory) * 100), note: String(count) }));
+    .map(([label, count]) => ({ label: humanizeCategory(label), value: Math.round((count / maxCategory) * 100), note: String(count) }));
 
   const patterns: string[] = [];
-  if (counts.WAIT > counts.BUY && counts.WAIT > 0) patterns.push("최근에는 즉시 구매보다 대기 판단이 더 많았습니다.");
-  if (counts.BUY > counts.WAIT && counts.BUY > 0) patterns.push("최근에는 구매 적기가 확인된 판단이 대기보다 많았습니다.");
-  if (counts.SKIP > 0) patterns.push(`${counts.SKIP}건은 현재 구매 필요성이 낮아 지출을 피했습니다.`);
-  if (completed.length >= 3) {
-    const dominant = (["BUY", "WAIT", "SKIP"] as const).sort((a, b) => counts[b] - counts[a])[0];
-    patterns.push(`가장 자주 나온 결론은 ${dominant}였습니다. 다음 리포트에서 변화 여부를 비교할 수 있습니다.`);
-  }
-  if (!patterns.length) patterns.push("판단 기록이 쌓이면 반복되는 구매 패턴을 여기서 보여줍니다.");
+  if (counts.WAIT > counts.BUY && counts.WAIT > 0) patterns.push("즉시 구매보다 대기 판단이 더 많았습니다. 기다리는 이유가 반복되는지 확인할 가치가 있습니다.");
+  if (counts.BUY > counts.WAIT && counts.BUY > 0) patterns.push("구매 적기가 확인된 판단이 대기보다 많았습니다. 실제 구매 후 만족도 피드백이 다음 판단 정확도를 높입니다.");
+  if (counts.SKIP > 0) patterns.push(`${counts.SKIP}건은 지금 구매할 필요가 낮다고 판단해 불필요한 지출을 피했습니다.`);
+  const uncertaintyCount = completed.reduce((sum, item) => sum + (item.result?.missingInformation.length ?? 0), 0);
+  if (uncertaintyCount > 0) patterns.push(`완료된 판단에서 확인되지 않은 정보가 ${uncertaintyCount}개 남았습니다. 최신 가격·재고·출시 정보는 다음 재판단 때 다시 확인해야 합니다.`);
+  if (!patterns.length) patterns.push("판단 기록이 쌓이면 BUY · WAIT · SKIP의 반복 패턴과 재확인 포인트를 자동으로 정리합니다.");
 
-  const recheck = history
-    .filter((item) => item.verdict === "WAIT" && item.result?.recheckAt)
+  const recheck = completed
+    .filter((item) => item.verdict === "WAIT" && (item.result?.recheckAt || item.result?.waitFor))
     .slice(0, 6)
     .map((item) => ({
       id: item.id,
       title: item.inputLabel,
-      note: item.result?.waitFor || item.result?.summary || "다시 확인할 시점이 설정되어 있습니다.",
+      note: item.result?.waitFor || item.result?.summary || "다시 확인할 조건이 있습니다.",
       verdict: item.verdict,
       recheckAt: item.result?.recheckAt ?? null,
+    }));
+
+  const priorities = completed
+    .filter((item): item is DecisionHistoryItem & { result: DecisionResult; verdict: "BUY" | "WAIT" | "SKIP" } => Boolean(item.result && item.verdict))
+    .sort((a, b) => priorityScore(b) - priorityScore(a))
+    .slice(0, 6)
+    .map((item) => ({
+      id: item.id,
+      title: item.inputLabel,
+      verdict: item.verdict,
+      reason: item.result.reasons[0] || item.result.summary,
+      confidence: Math.round(item.result.confidence),
+    }));
+
+  const timeline = completed
+    .filter((item) => item.verdict === "WAIT" && (item.result?.recheckAt || item.result?.waitFor))
+    .slice(0, 8)
+    .map((item) => ({
+      id: item.id,
+      title: item.inputLabel,
+      when: item.result?.recheckAt || "조건 충족 시",
+      action: item.result?.waitFor || "시장·가격·필요성 다시 확인",
+    }));
+
+  const riskFlags = uniqueStrings(completed.flatMap((item) => [
+    ...(item.result?.missingInformation ?? []),
+    ...(item.result?.tradeoffs ?? []),
+    ...(item.result?.avoid ?? []),
+  ])).slice(0, 10);
+
+  const scenarioCandidates = completed
+    .filter((item) => (item.result?.alternatives.length ?? 0) >= 2)
+    .slice(0, 5)
+    .map((item) => ({
+      decisionId: item.id,
+      title: item.inputLabel,
+      alternatives: item.result?.alternatives.slice(0, 5) ?? [],
     }));
 
   return {
@@ -262,18 +261,19 @@ export async function getReportData(
           { label: "총 판단", value: String(history.length), note: "최근 7일" },
           { label: "BUY", value: String(counts.BUY), note: "구매" },
           { label: "WAIT", value: String(counts.WAIT), note: "대기" },
-          { label: "SKIP", value: String(counts.SKIP), note: "보류" },
+          { label: "SKIP", value: String(counts.SKIP), note: "구매 안 함" },
         ]
       : [
           { label: "총 판단", value: String(history.length), note: "최근 30일" },
           { label: "완료 판단", value: String(completed.length), note: "AI 판단 완료" },
-          { label: "대기", value: String(counts.WAIT), note: "재확인 후보" },
-          { label: "불필요 지출 방지", value: String(counts.SKIP), note: "SKIP" },
+          { label: "WAIT", value: String(counts.WAIT), note: "재확인 후보" },
+          { label: "SKIP", value: String(counts.SKIP), note: "불필요 지출 방지" },
         ],
     categoryBars,
     patterns,
     recheck,
     historyCount: history.length,
+    premium: { priorities, timeline, riskFlags, scenarioCandidates },
   };
 }
 
@@ -285,19 +285,33 @@ async function listDecisionsSince(user: ChatGPTUser, from: number): Promise<Deci
        FROM decisions WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT 200`,
     )
     .bind(user.id, from)
-    .all<any>();
+    .all<Record<string, unknown>>();
+  return (result.results ?? []).map(toHistoryItem);
+}
 
-  return (result.results ?? []).map((row: any) => ({
-    id: String(row.id),
-    createdAt: Number(row.created_at),
-    inputType: row.input_type,
-    inputLabel: String(row.input_label),
-    categoryId: row.category_id ?? null,
-    subcategoryId: row.subcategory_id ?? null,
-    verdict: ["BUY", "WAIT", "SKIP"].includes(row.verdict) ? row.verdict : null,
-    status: row.status,
-    result: parseJson<DecisionResult | null>(row.result_json, null),
-  }));
+function toHistoryItem(row: Record<string, unknown>): DecisionHistoryItem {
+  const verdict = typeof row.verdict === "string" && ["BUY", "WAIT", "SKIP"].includes(row.verdict)
+    ? row.verdict as DecisionHistoryItem["verdict"]
+    : null;
+  const status = row.status === "completed" || row.status === "failed" ? row.status : "pending";
+  const inputType = row.input_type === "photo" || row.input_type === "link" || row.input_type === "name" ? row.input_type : "category";
+  return {
+    id: String(row.id ?? ""),
+    createdAt: Number(row.created_at ?? 0),
+    inputType,
+    inputLabel: String(row.input_label ?? "제품"),
+    categoryId: typeof row.category_id === "string" ? row.category_id : null,
+    subcategoryId: typeof row.subcategory_id === "string" ? row.subcategory_id : null,
+    verdict,
+    status,
+    result: parseJson<DecisionResult | null>(typeof row.result_json === "string" ? row.result_json : null, null),
+  };
+}
+
+function priorityScore(item: DecisionHistoryItem) {
+  if (!item.result || !item.verdict) return 0;
+  const verdictWeight = item.verdict === "BUY" ? 300 : item.verdict === "WAIT" ? 180 : 60;
+  return verdictWeight + item.result.confidence + Math.min(30, item.result.reasons.length * 5);
 }
 
 function sanitizeProfile(profile: UserModelPayload): UserModelPayload {
@@ -306,7 +320,7 @@ function sanitizeProfile(profile: UserModelPayload): UserModelPayload {
   return {
     stateText: typeof profile.stateText === "string" ? profile.stateText.trim().slice(0, 6000) : "",
     structuredState: profile.structuredState ?? null,
-    survey,
+    survey: survey as Record<string, string | number>,
     categoryProfiles: categoryProfiles as Record<string, Record<string, string | number>>,
     completion: clampInt(profile.completion, 0, 100),
   };
@@ -329,13 +343,25 @@ function inputCategoryLabel(type: string) {
   return "카테고리";
 }
 
+function humanizeCategory(value: string) {
+  return value.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function uniqueStrings(values: string[]) {
+  const seen = new Set<string>();
+  const output: string[] = [];
+  for (const value of values) {
+    const clean = value.trim();
+    if (!clean || seen.has(clean)) continue;
+    seen.add(clean);
+    output.push(clean);
+  }
+  return output;
+}
+
 function parseJson<T>(value: string | null | undefined, fallback: T): T {
   if (!value) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
+  try { return JSON.parse(value) as T; } catch { return fallback; }
 }
 
 function clampInt(value: unknown, min: number, max: number) {

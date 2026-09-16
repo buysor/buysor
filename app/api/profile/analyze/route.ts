@@ -6,7 +6,6 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
-  if (!user) return Response.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
   try {
     const body = await request.json() as { text?: string };
@@ -14,6 +13,10 @@ export async function POST(request: Request) {
     if (!text) return Response.json({ error: "현재 상태를 먼저 입력해 주세요." }, { status: 400 });
 
     const structuredState = await analyzeUserState(text);
+    if (!user) {
+      return Response.json({ structuredState, saved: false });
+    }
+
     const current = await getUserProfile(user);
     const saved = await saveUserProfile(user, {
       ...current,
@@ -22,7 +25,7 @@ export async function POST(request: Request) {
       completion: Math.max(current.completion, 25),
     });
 
-    return Response.json({ structuredState, profile: saved });
+    return Response.json({ structuredState, profile: saved, saved: true });
   } catch (error) {
     if (error instanceof AiNotConfiguredError) {
       return Response.json({ error: "AI_NOT_CONFIGURED" }, { status: 503 });

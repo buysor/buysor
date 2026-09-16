@@ -4,6 +4,7 @@ import { Camera, Languages, Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { AuthControl } from "@/components/auth-control";
 import { usePreferences } from "@/components/preferences-provider";
+import styles from "./site-shell.module.css";
 
 type SiteShellProps = {
   children: React.ReactNode;
@@ -15,23 +16,26 @@ export function SiteShell({ children, compact = false }: SiteShellProps) {
   const ko = language === "ko";
 
   return (
-    <div className="site-shell">
-      <header className="site-header">
+    <div className={`site-shell ${styles.shell}`}>
+      <header className={`site-header ${styles.header}`}>
         <Link className="brand" href="/" aria-label="BUYSOR 홈">
           <span className="brand-mark">B</span>
           <span>BUYSOR</span>
         </Link>
 
-        <nav className="main-nav" aria-label={ko ? "주요 메뉴" : "Main navigation"}>
+        <nav className={`main-nav ${styles.nav}`} aria-label={ko ? "주요 메뉴" : "Main navigation"}>
           <Link href="/">{ko ? "구매 결정" : "Decide"}</Link>
           <Link href="/lens">Lens</Link>
           <Link href="/category">{ko ? "카테고리" : "Category"}</Link>
+          <Link href="/profile">{ko ? "내 프로필" : "Profile"}</Link>
+          <Link href="/reports/weekly">{ko ? "주간 리포트" : "Weekly"}</Link>
+          <Link href="/reports/monthly">{ko ? "월간 리포트" : "Monthly"}</Link>
           <Link href="/attendance">{ko ? "출석 룰렛" : "Daily wheel"}</Link>
           <Link href="/my">{ko ? "내 바이저" : "My BUYSOR"}</Link>
           <Link href="/guide">{ko ? "설명서" : "Guide"}</Link>
         </nav>
 
-        <div className="header-tools">
+        <div className={`header-tools ${styles.tools}`}>
           <button type="button" className="header-tool" onClick={() => setLanguage(ko ? "en" : "ko")} aria-label={ko ? "Switch to English" : "한국어로 전환"} title={ko ? "English" : "한국어"}>
             <Languages aria-hidden="true" size={17} />
             <span>{ko ? "EN" : "한"}</span>

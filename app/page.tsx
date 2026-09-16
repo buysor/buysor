@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { usePreferences } from "@/components/preferences-provider";
 import { SiteShell } from "@/components/site-shell";
+import styles from "./home-mobile.module.css";
 
 const signals = [
   { ko: ["예산", "무리 없이 쓸 수 있는 금액"], en: ["Budget", "What you can comfortably spend"] },
@@ -29,7 +30,7 @@ export default function Home() {
 
   return (
     <SiteShell>
-      <main>
+      <main className={styles.homeMain}>
         <section className="home-launch-hero">
           <div className="home-launch-copy">
             <span className="section-kicker">BUYSOR DECISION ENGINE</span>

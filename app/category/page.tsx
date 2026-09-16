@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Grid2X2 } from "lucide-react";
 import { DecisionStudio } from "@/components/decision-studio";
+import { PersonalizationBanner } from "@/components/user-model-client";
 import { LocalizedText } from "@/components/preferences-provider";
 import { SiteShell } from "@/components/site-shell";
 
@@ -22,6 +23,8 @@ export default function CategoryPage() {
             <p><LocalizedText ko="카테고리는 검색 범위를 좁히는 시작점입니다. 최종 판단은 예산·용도·보유 제품·구매 시점까지 함께 봅니다." en="Category is only the starting scope. Budget, use, what you own and timing still drive the decision." /></p>
           </div>
         </section>
+
+        <PersonalizationBanner />
         <DecisionStudio embedded initialEntryMode="category" />
       </main>
     </SiteShell>

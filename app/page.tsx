@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  ArrowRight,
-  Ban,
-  CalendarClock,
-  Camera,
-  CheckCircle2,
-  Grid2X2,
-  PackageCheck,
-  Search,
-  UserRound,
-} from "lucide-react";
+import { ArrowRight, Camera, Grid2X2 } from "lucide-react";
 import { usePreferences } from "@/components/preferences-provider";
 import { SiteShell } from "@/components/site-shell";
 import styles from "./home-mobile.module.css";
@@ -18,10 +8,10 @@ import styles from "./home-mobile.module.css";
 const signals = [
   { ko: ["예산", "무리 없이 쓸 수 있는 금액"], en: ["Budget", "What you can comfortably spend"] },
   { ko: ["용도", "실제로 가장 자주 할 일"], en: ["Use", "What you will actually do most"] },
-  { ko: ["보유 제품", "교체가 정말 필요한지"], en: ["What you own", "Whether an upgrade is necessary"] },
+  { ko: ["보유 제품", "교체가 정말 필요한지"], en: ["Current gear", "Whether an upgrade is really needed"] },
+  { ko: ["사용 환경", "집·현장·이동 등 실제 조건"], en: ["Environment", "Where and how you actually use it"] },
   { ko: ["구매 시점", "지금 살지 기다릴지"], en: ["Timing", "Buy now or wait"] },
-  { ko: ["신품 · 중고", "가격과 상태, AS까지"], en: ["New · used", "Price, condition and warranty"] },
-  { ko: ["감가 · 재판매", "나중에 남는 가치"], en: ["Resale", "What it may be worth later"] },
+  { ko: ["미래 계획", "이사·취업·여행·교체 계획까지"], en: ["Future plans", "What changes next"] },
 ];
 
 export default function Home() {
@@ -31,112 +21,76 @@ export default function Home() {
   return (
     <SiteShell>
       <main className={styles.homeMain}>
-        <section className="home-launch-hero">
-          <div className="home-launch-copy">
-            <span className="section-kicker">BUYSOR DECISION ENGINE</span>
+        <section className={styles.hero}>
+          <div className={styles.heroCopy}>
+            <span className={styles.eyebrow}>{ko ? "구매 고민을 끝내는 AI" : "AI FOR BUYING DECISIONS"}</span>
             <h1>
-              {ko ? <>검색은 충분합니다.<br /><span>결정이 필요합니다.</span></> : <>You have enough search.<br /><span>Now make the decision.</span></>}
+              {ko ? <>사진 한 장이면,<br /><em>구매 결정 끝.</em></> : <>One photo.<br /><em>One clear decision.</em></>}
             </h1>
             <p>
               {ko
-                ? "BUYSOR는 제품을 먼저 늘어놓지 않습니다. 당신의 예산·용도·보유제품·구매시점을 먼저 보고, 지금 살지부터 무엇을 살지까지 하나의 결론으로 정리합니다."
-                : "BUYSOR does not start with a wall of products. It starts with your budget, use, current gear and timing, then resolves whether to buy and what to buy."}
+                ? "추천 목록을 더 늘리지 않습니다. 예산·용도·보유 제품·환경·구매 시점까지 보고, 지금 사야 하는지부터 무엇을 사야 하는지까지 정리합니다."
+                : "No more endless recommendation lists. BUYSOR considers your budget, use, current gear, environment and timing, then resolves whether to buy and what to buy."}
             </p>
-            <div className="home-launch-actions">
-              <a className="home-primary-cta" href="/lens"><Camera size={18} /> {ko ? "사진으로 결정 시작" : "Start with a photo"}</a>
-              <a className="home-secondary-cta" href="/category"><Grid2X2 size={18} /> {ko ? "카테고리로 찾기" : "Browse by category"}</a>
+
+            <div className={styles.heroActions}>
+              <a className={styles.primary} href="/lens"><Camera size={18} /> {ko ? "사진으로 시작하기" : "Start with a photo"}</a>
+              <a className={styles.secondary} href="/category"><Grid2X2 size={17} /> {ko ? "카테고리로 찾기" : "Browse by category"} <ArrowRight size={15} /></a>
             </div>
-            <div className="home-launch-meta">
-              <span><CheckCircle2 size={14} /> {ko ? "BUY · WAIT · SKIP" : "BUY · WAIT · SKIP"}</span>
-              <span><CheckCircle2 size={14} /> {ko ? "신품 · 중고 · 시점" : "New · used · timing"}</span>
-              <span><CheckCircle2 size={14} /> {ko ? "감가 · 재판매까지" : "Depreciation · resale"}</span>
+
+            <div className={styles.heroMeta}>
+              <span>{ko ? "사진 · 스크린샷 · 링크 · 제품명" : "Photo · screenshot · link · product"}</span>
+              <span aria-hidden="true">•</span>
+              <span>{ko ? "신품 · 중고 · 시점 · 감가" : "New · used · timing · resale"}</span>
             </div>
           </div>
 
-          <div className="home-decision-visual" aria-label={ko ? "BUYSOR 의사결정 흐름" : "BUYSOR decision flow"}>
-            <div className="home-decision-inputs">
-              <span>{ko ? "예산" : "Budget"}</span>
-              <span>{ko ? "용도" : "Use"}</span>
-              <span>{ko ? "보유 제품" : "Current gear"}</span>
-              <span>{ko ? "구매 시점" : "Timing"}</span>
+          <div className={styles.decisionStage} aria-label={ko ? "BUYSOR의 구매 판단 예시" : "BUYSOR decision example"}>
+            <div className={styles.stageTop}>
+              <span>BUYSOR</span>
+              <small>{ko ? "당신의 상황에 따라 답이 달라집니다" : "The answer changes with your context"}</small>
             </div>
-            <div className="home-decision-line" aria-hidden="true" />
-            <div className="home-decision-core">
-              <small>PERSONAL DECISION</small>
-              <strong>BUYSOR</strong>
-              <span>{ko ? "조건 × 시장 × 시점" : "Context × market × timing"}</span>
+            <div className={`${styles.stageRow} ${styles.buy}`}>
+              <strong>BUY</strong>
+              <span>{ko ? "지금 사는 게 맞을 때" : "Buy now"}</span>
             </div>
-            <div className="home-decision-line home-decision-line--out" aria-hidden="true" />
-            <div className="home-decision-outcome">
-              <div><b className="is-buy">BUY</b><b>WAIT</b><b>SKIP</b></div>
-              <strong>{ko ? "지금 산다면 1순위까지" : "If BUY, the #1 pick too"}</strong>
-              <span>{ko ? "추천 목록으로 다시 고민시키지 않습니다." : "No second round of list fatigue."}</span>
+            <div className={`${styles.stageRow} ${styles.wait}`}>
+              <strong>WAIT</strong>
+              <span>{ko ? "기다리는 게 더 이득일 때" : "Wait"}</span>
             </div>
-          </div>
-        </section>
-
-        <section className="home-difference-section">
-          <div className="section-title-row home-difference-title">
-            <div>
-              <span className="section-kicker">WHY BUYSOR</span>
-              <h2>{ko ? <>추천 목록이 아니라,<br />결정을 만듭니다.</> : <>Not another list.<br />A decision.</>}</h2>
+            <div className={`${styles.stageRow} ${styles.skip}`}>
+              <strong>SKIP</strong>
+              <span>{ko ? "지금은 살 이유가 없을 때" : "Skip"}</span>
             </div>
-            <p>{ko ? "기존 검색은 정보를 더 줍니다. BUYSOR는 서로 충돌하는 정보를 당신의 조건으로 정리합니다." : "Search gives you more information. BUYSOR resolves conflicting information against your situation."}</p>
-          </div>
-
-          <div className="home-compare-map">
-            <article className="home-compare-card home-compare-card--old">
-              <div className="home-compare-card-head"><Search size={19} /><strong>{ko ? "일반 검색 · 추천" : "Typical search · recommendation"}</strong></div>
-              <div className="home-flow-row"><span>{ko ? "검색" : "Search"}</span><ArrowRight size={14} /><span>{ko ? "추천 목록" : "Product list"}</span><ArrowRight size={14} /><span>{ko ? "리뷰 비교" : "Compare reviews"}</span><ArrowRight size={14} /><b>{ko ? "다시 고민" : "Still deciding"}</b></div>
-              <p>{ko ? "정보는 늘지만 최종 책임은 다시 사용자에게 돌아옵니다." : "More information, but the final decision is still yours to reconstruct."}</p>
-            </article>
-
-            <article className="home-compare-card home-compare-card--buysor">
-              <div className="home-compare-card-head"><UserRound size={19} /><strong>BUYSOR</strong></div>
-              <div className="home-flow-row"><span>{ko ? "나의 조건" : "My context"}</span><ArrowRight size={14} /><span>{ko ? "가격·시점·중고·감가" : "Price · timing · resale"}</span><ArrowRight size={14} /><b>BUY · WAIT · SKIP</b><ArrowRight size={14} /><strong>{ko ? "1순위 모델" : "#1 model"}</strong></div>
-              <p>{ko ? "제품보다 사용자를 먼저 보고, 구매 여부와 구체적인 선택까지 한 흐름으로 끝냅니다." : "It starts with the person, then resolves both the timing and the exact product."}</p>
-            </article>
+            <div className={styles.stageFoot}>{ko ? "BUY라면 1순위 모델과 이유까지." : "If BUY, you also get the #1 pick and why."}</div>
           </div>
         </section>
 
-        <section className="decision-triptych" aria-label={ko ? "세 가지 구매 결정" : "Three purchase decisions"}>
-          <article className="buy-card">
-            <PackageCheck aria-hidden="true" size={22} />
-            <strong>BUY</strong>
-            <span>{ko ? "조건과 시점이 맞을 때" : "When product and timing fit"}</span>
-          </article>
-          <article className="wait-card">
-            <CalendarClock aria-hidden="true" size={22} />
-            <strong>WAIT</strong>
-            <span>{ko ? "조금 더 기다리는 게 나을 때" : "When waiting is the better move"}</span>
-          </article>
-          <article className="skip-card">
-            <Ban aria-hidden="true" size={22} />
-            <strong>SKIP</strong>
-            <span>{ko ? "지금은 필요하지 않을 때" : "When you do not need it"}</span>
-          </article>
-        </section>
-
-        <section className="signal-section signal-section--compact">
-          <div className="section-title-row">
-            <h2>{ko ? <>주특기는 제품 추천이 아니라,<br />당신에게 맞는 판단입니다.</> : <>The specialty is not recommendation.<br />It is fit.</>}</h2>
-            <p>{ko ? "같은 제품도 사람과 상황이 다르면 답이 달라집니다." : "The same product can be right for one person and wrong for another."}</p>
+        <section className={styles.contextSection}>
+          <div className={styles.sectionHead}>
+            <h2>{ko ? <>제품보다,<br />당신부터 봅니다.</> : <>You first.<br />Products second.</>}</h2>
+            <p>{ko ? "같은 제품도 사람과 상황이 다르면 정답이 달라집니다." : "The same product can be right for one person and wrong for another."}</p>
           </div>
-          <div className="signal-grid">
+          <div className={styles.signalList}>
             {signals.map((item, index) => {
               const [title, detail] = ko ? item.ko : item.en;
               return (
-                <article key={title}>
+                <div className={styles.signalRow} key={title}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
-                  <div><strong>{title}</strong><p>{detail}</p></div>
-                </article>
+                  <strong>{title}</strong>
+                  <p>{detail}</p>
+                </div>
               );
             })}
           </div>
-          <div className="home-final-actions">
-            <a className="home-primary-cta" href="/lens">{ko ? "사진으로 시작하기" : "Start with a photo"} <ArrowRight aria-hidden="true" size={17} /></a>
-            <a className="home-secondary-cta" href="/category">{ko ? "제품군부터 찾기" : "Start from a category"} <ArrowRight aria-hidden="true" size={17} /></a>
+        </section>
+
+        <section className={styles.finalSection}>
+          <div>
+            <span>{ko ? "정보를 더 주는 서비스가 아니라" : "Not more information"}</span>
+            <h2>{ko ? "결정을 끝내는 서비스." : "A service that ends the decision."}</h2>
           </div>
+          <a href="/lens">{ko ? "사진으로 결정 시작" : "Start deciding"} <ArrowRight size={17}/></a>
         </section>
       </main>
     </SiteShell>

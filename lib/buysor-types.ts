@@ -41,6 +41,7 @@ export type DecisionAnswers = {
   purpose?: string;
   budget?: string;
   current?: string;
+  condition?: string;
   timing?: string;
   note?: string;
 };
@@ -96,6 +97,28 @@ export type ReportBar = {
   note: string;
 };
 
+export type PremiumReportData = {
+  priorities: Array<{
+    id: string;
+    title: string;
+    verdict: DecisionVerdict;
+    reason: string;
+    confidence: number;
+  }>;
+  timeline: Array<{
+    id: string;
+    title: string;
+    when: string;
+    action: string;
+  }>;
+  riskFlags: string[];
+  scenarioCandidates: Array<{
+    decisionId: string;
+    title: string;
+    alternatives: DecisionAlternative[];
+  }>;
+};
+
 export type ReportData = {
   tier: SubscriptionTier;
   locked: boolean;
@@ -113,4 +136,5 @@ export type ReportData = {
     recheckAt: string | null;
   }>;
   historyCount: number;
+  premium: PremiumReportData;
 };

@@ -56,16 +56,16 @@ export default function Home() {
           </div>
 
           <div className={styles.heroVisual}>
-            <img src="/buysor-product-family.svg" alt={ko ? "전자제품, 가전, 전동공구를 함께 보여주는 BUYSOR 대표 이미지" : "BUYSOR hero showing electronics, appliances and power tools"} />
+            <img src="/buysor-hero-products.svg" alt={ko ? "노트북, 스마트폰, 헤드폰, 전동드릴, 냉장고, 세탁기를 보여주는 BUYSOR 대표 이미지" : "BUYSOR hero showing a laptop, phone, headphones, drill, refrigerator and washer"} />
             <div className={styles.visualLegend} aria-label={ko ? "지원 카테고리" : "Supported categories"}>
               <span>{ko ? "전자제품" : "Electronics"}</span>
               <span>{ko ? "가전" : "Appliances"}</span>
               <span>{ko ? "전동공구" : "Power tools"}</span>
             </div>
             <div className={styles.visualFlow}>
-              <span>{ko ? "제품 정보" : "PRODUCT"}</span>
-              <i>+</i>
-              <span>USER MODEL</span>
+              <span>{ko ? "사진·링크·제품명" : "PHOTO · LINK · PRODUCT"}</span>
+              <i>→</i>
+              <span>{ko ? "상황 반영" : "USER MODEL"}</span>
               <i>→</i>
               <strong>{ko ? "구매 판단" : "DECISION"}</strong>
             </div>

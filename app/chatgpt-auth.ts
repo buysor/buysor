@@ -152,7 +152,7 @@ async function verifySessionToken(
     const valid = await crypto.subtle.verify(
       "HMAC",
       key,
-      base64UrlDecode(signaturePart),
+      new Uint8Array(base64UrlDecode(signaturePart)).buffer,
       encoder.encode(payloadPart),
     );
 

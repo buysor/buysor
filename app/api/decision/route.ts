@@ -61,7 +61,7 @@ export async function POST(request:Request){
   const result=await generateDecision({draft,answers:body.answers,userModel:await getUserProfile(user),feature,
     reserveMicro:budget.reserveMicro,onUsage:usage=>recordUsage(runId!,user.id,usage)});
   if(!result.headline||result.reasons.length<2)throw new PublicError(502,'INVALID_RESULT','판단 결과가 불완전합니다.');
-  await completeRun(runId,user.id,result,decisionId);
+  await completeRun(runId!,user.id,result,decisionId);
   return json({id:decisionId,runId,result,chargedCredits:credits,evidenceMode:'user_supplied'});
  }catch(e){
   if(requestKey&&userId){try{const done=await existingRun(userId,requestKey);if(done?.state==='completed')return json({id:done.decision_id??done.id,result:JSON.parse(done.result_json!),replayed:true});}catch{}}

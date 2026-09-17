@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
+/* Keep the shared component catalog utilities available after page refactors. */
+@source inline("[scrollbar-width:thin] [scrollbar-gutter:stable] no-scrollbar scroll-fade shimmer motion-reduce:animate-none");
+
 :root {
   --ink: #1d1d1f;
   --muted: #6e6e73;

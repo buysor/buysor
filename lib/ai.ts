@@ -1,3 +1,6 @@
+import {costMicroUSD, FEATURES, type Feature} from './commerce-policy';
+import {runtimeConfig} from './commerce-runtime';
+import {PublicError} from './request-safety';
 import type {
   DecisionAnswers,
   DecisionDraft,
@@ -23,6 +26,8 @@ type AiCall = {
   user: string;
   imageDataUrl?: string;
   maxTokens?: number;
+  reserveMicro: number;
+  onUsage: (usage:{micro:number;input:number;output:number;providerId:string})=>Promise<void>;
 };
 
 const userStateSchema: JsonSchema = {
@@ -126,46 +131,22 @@ Your job is not to generate a long recommendation list. Decide whether the user 
 Use the user's budget, actual use, current products, environment, past purchase experience, risk tolerance, timing, future plans, expected ownership period, resale value, new-vs-used openness, and any category-specific constraints.
 Never invent a model, price, release date, warranty fact, resale price, condition, or compatibility fact that is not supported by the supplied context.
 If current market facts are missing, identify the missing information instead of pretending it is known.
-A BUY verdict may include one top pick only when enough evidence exists. If evidence is insufficient, set topPick to null and explain what must be checked.
+The supplied URLs are unverified user references, not retrieved pages. There is no live web search in this task. Never claim to have searched or checked a current price. Clearly label this evidence boundary. A BUY verdict may include one top pick only when enough evidence exists. If evidence is insufficient, set topPick to null and explain what must be checked.
 WAIT must state what event, price, timing, or information should trigger a re-check. SKIP must explain why buying is unnecessary or harmful right now.
-State trade-offs clearly. Do not optimize for affiliate conversion. Optimize for user fit and avoiding unnecessary purchases.
+Provide three meaningful scenarios where evidence permits: keep current product, buy a suitable new product, consider used or wait. Do not fabricate product names to meet a count. State trade-offs clearly. Do not optimize for affiliate conversion. Optimize for user fit and avoiding unnecessary purchases.
 Write all user-facing text in Korean unless the supplied language is English.`;
 
 export function getAiRuntimeStatus(): AiRuntimeStatus {
-  const provider = normalizeProvider(process.env.AI_PROVIDER);
-  const model = process.env.AI_MODEL?.trim() || null;
-  const hasKey = provider === "openai"
-    ? Boolean(process.env.OPENAI_API_KEY)
-    : provider === "anthropic"
-      ? Boolean(process.env.ANTHROPIC_API_KEY)
-      : false;
-
-  return {
-    configured: Boolean(provider && model && hasKey),
-    provider,
-    model,
-  };
-}
-
-export async function analyzeUserState(text: string): Promise<StructuredUserState> {
-  const clean = text.trim();
-  if (!clean) throw new Error("상태 설명이 비어 있습니다.");
-
-  const result = await callJson<StructuredUserState>({
-    schemaName: "buysor_user_state",
-    schema: userStateSchema,
-    system: `${BUYSOR_SYSTEM}\nFor this task, only structure the user's own statements. Do not infer facts that were not stated. Put ambiguous or missing details in uncertainties.`,
-    user: `사용자가 직접 작성한 현재 상태 원문:\n\n${clean}`,
-    maxTokens: 1400,
-  });
-
-  return sanitizeUserState(result);
+ const config=runtimeConfig();return {configured:config.configured,provider:config.configured?'openai':null,model:config.model};
 }
 
 export async function generateDecision(input: {
   draft: DecisionDraft;
   answers: DecisionAnswers;
   userModel: UserModelPayload | null;
+  feature?: Feature;
+  reserveMicro: number;
+  onUsage: (usage:{micro:number;input:number;output:number;providerId:string})=>Promise<void>;
 }): Promise<DecisionResult> {
   const payload = {
     productInput: {
@@ -186,118 +167,43 @@ export async function generateDecision(input: {
     system: BUYSOR_SYSTEM,
     user: `다음 입력을 바탕으로 구매 판단을 생성하세요. 제공되지 않은 현재 시세·출시 정보·실재 모델 정보는 만들어내지 마세요.\n\n${JSON.stringify(payload, null, 2)}`,
     imageDataUrl: input.draft.imageDataUrl,
-    maxTokens: 2800,
+    maxTokens: FEATURES[input.feature ?? 'standard'].maxOutput,
+    reserveMicro: input.reserveMicro,
+    onUsage: input.onUsage,
   });
 
   return sanitizeDecision(result);
 }
 
+
 async function callJson<T>(call: AiCall): Promise<T> {
-  const status = getAiRuntimeStatus();
-  if (!status.configured || !status.provider || !status.model) {
-    throw new AiNotConfiguredError();
-  }
-
-  if (status.provider === "openai") {
-    return callOpenAi<T>(call, status.model);
-  }
-  return callAnthropic<T>(call, status.model);
-}
-
-async function callOpenAi<T>(call: AiCall, model: string): Promise<T> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new AiNotConfiguredError();
-
-  const content: Array<Record<string, unknown>> = [
-    { type: "input_text", text: call.user },
-  ];
-  if (call.imageDataUrl) {
-    content.unshift({ type: "input_image", image_url: call.imageDataUrl });
-  }
-
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${key}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      instructions: call.system,
-      input: [{ role: "user", content }],
-      max_output_tokens: call.maxTokens ?? 2200,
-      text: {
-        format: {
-          type: "json_schema",
-          name: call.schemaName,
-          strict: true,
-          schema: call.schema,
-        },
-      },
-    }),
-  });
-
-  const body = await response.json() as Record<string, unknown>;
-  if (!response.ok) {
-    throw new Error(readApiError(body, "OpenAI 요청에 실패했습니다."));
-  }
-
-  const text = extractOpenAiText(body);
-  return parseJson<T>(text);
-}
-
-async function callAnthropic<T>(call: AiCall, model: string): Promise<T> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new AiNotConfiguredError();
-
-  const content: Array<Record<string, unknown>> = [];
-  if (call.imageDataUrl) {
-    const image = parseDataUrl(call.imageDataUrl);
-    if (image) {
-      content.push({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: image.mediaType,
-          data: image.base64,
-        },
-      });
-    }
-  }
-  content.push({ type: "text", text: call.user });
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: call.maxTokens ?? 2200,
-      system: call.system,
-      messages: [{ role: "user", content }],
-      output_config: {
-        format: {
-          type: "json_schema",
-          schema: call.schema,
-        },
-      },
-    }),
-  });
-
-  const body = await response.json() as Record<string, unknown>;
-  if (!response.ok) {
-    throw new Error(readApiError(body, "Anthropic 요청에 실패했습니다."));
-  }
-
-  const blocks = Array.isArray(body.content) ? body.content : [];
-  const text = blocks
-    .map((block) => isRecord(block) && block.type === "text" && typeof block.text === "string" ? block.text : "")
-    .join("")
-    .trim();
-  return parseJson<T>(text);
+ const status=getAiRuntimeStatus();if(!status.configured||!status.model)throw new AiNotConfiguredError();
+ const model=status.model;
+ // A deliberately conservative preflight bound; no automatic retries or paid tools.
+ const textBytes=new TextEncoder().encode(call.system+call.user+JSON.stringify(call.schema)).byteLength;
+ const upperInput=textBytes+4096+(call.imageDataUrl?8192:0);
+ const upper=costMicroUSD(model,upperInput,call.maxTokens??2800);
+ if(upper>call.reserveMicro)throw new PublicError(413,'ANALYSIS_BUDGET_EXCEEDED','입력을 줄이거나 심층 판단을 선택해 주세요. 크레딧은 복원됩니다.');
+ const content: Array<Record<string,unknown>>=[{type:'input_text',text:call.user}];
+ if(call.imageDataUrl)content.unshift({type:'input_image',image_url:call.imageDataUrl,detail:'low'});
+ const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),55000);
+ try {
+ const response=await fetch('https://api.openai.com/v1/responses',{
+  method:'POST',headers:{authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'content-type':'application/json'},
+  signal:controller.signal,body:JSON.stringify({model,store:false,instructions:call.system,
+   input:[{role:'user',content}],max_output_tokens:call.maxTokens??2800,
+   text:{format:{type:'json_schema',name:call.schemaName,strict:true,schema:call.schema}}})
+ });
+ if(!response.ok)throw new PublicError(502,'AI_PROVIDER_FAILED','분석 제공자 연결에 실패했습니다. 크레딧은 복원됩니다.');
+ const body=await response.json() as Record<string,unknown>;
+ const usage=body.usage as {input_tokens?:number;output_tokens?:number}|undefined;
+ if(usage && Number.isSafeInteger(usage.input_tokens) && Number.isSafeInteger(usage.output_tokens)) {
+   const input=usage.input_tokens!;const output=usage.output_tokens!;
+   await call.onUsage({micro:costMicroUSD(model,input,output),input,output,providerId:String(body.id??'').slice(0,200)});
+ }
+ if(body.status==='incomplete')throw new PublicError(502,'AI_INCOMPLETE','분석을 마치지 못했습니다. 크레딧은 복원됩니다.');
+ return parseJson<T>(extractOpenAiText(body));
+ } finally {clearTimeout(timeout);}
 }
 
 function normalizeProvider(value: string | undefined): AiProvider | null {

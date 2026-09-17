@@ -23,21 +23,9 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 export async function isLocalRequest() {
-  if (process.env.BUYSOR_LOCAL_PREVIEW === "1") return true;
-
-  const requestHeaders = await headers();
-  const host = (
-    requestHeaders.get("x-forwarded-host") ||
-    requestHeaders.get("host") ||
-    ""
-  ).toLowerCase();
-
-  return (
-    host === "127.0.0.1" ||
-    host.startsWith("127.0.0.1:") ||
-    host === "localhost" ||
-    host.startsWith("localhost:")
-  );
+  if (process.env.NODE_ENV === "production" || process.env.BUYSOR_LOCAL_PREVIEW !== "1") return false;
+  const host = (await headers()).get("host")?.toLowerCase() || "";
+  return /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host);
 }
 
 export async function createGoogleSessionToken(

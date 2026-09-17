@@ -33,7 +33,7 @@ export function LaunchCheck() {
     ["웹 앱", health.app, "페이지와 Worker 런타임"],
     ["D1 연결", health.database.binding, health.database.ready ? "핵심 테이블 준비 완료" : "마이그레이션 적용 필요"],
     ["Google 로그인 설정", health.googleAuth.configured, "Client ID · Secret · Session Secret"],
-    ["AI 판단 엔진", health.ai.configured, health.ai.configured ? `${health.ai.provider} · ${health.ai.model}` : "AI_PROVIDER · AI_MODEL · API Key 필요"],
+    ["AI 판단 엔진", health.ai.configured, health.ai.configured ? `${health.ai.provider} · ${health.ai.model}` : "AI 연결 · 일 원가 한도 · 품질 검증 필요"],
     ["유료 결제", health.billing.configured, "등급 권한은 준비됨 · 결제 제공자 연결은 별도"],
   ] as const;
 

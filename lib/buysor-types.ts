@@ -1,4 +1,4 @@
-export type SubscriptionTier = "essential" | "plus" | "premium";
+export type SubscriptionTier = "free" | "member";
 export type DecisionVerdict = "BUY" | "WAIT" | "SKIP";
 export type DecisionInputType = "photo" | "link" | "name" | "category";
 

@@ -13,6 +13,7 @@ import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
 import { usePreferences } from "@/components/preferences-provider";
 import styles from "./home-mobile.module.css";
+import { HomeStory } from "@/components/home-story";
 import showroom from "./hero-showroom.module.css";
 
 const features = [
@@ -129,6 +130,7 @@ export default function Home() {
           </div>
           <Link href="/lens">{ko ? "구매 판단 시작" : "Start a decision"} <ArrowRight size={16} /></Link>
         </section>
+        <HomeStory />
       </main>
     </SiteShell>
   );

@@ -240,48 +240,8 @@ export function UserModelClient() {
   }
 
   async function analyzeState() {
-    const clean = text.trim();
-    if (!clean) return;
-    setAnalysisState("loading");
-    setMessage("");
-
-    try {
-      const response = await fetch("/api/profile/analyze", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: clean }),
-      });
-      const payload = await response.json() as { error?: string; structuredState?: StructuredUserState; profile?: UserModelPayload };
-      if (response.status === 503 && payload.error === "AI_NOT_CONFIGURED") {
-        setAiState("missing");
-        setAnalysisState("idle");
-        setMessage("AI API가 연결되면 이 원문을 실제로 구조화합니다. 지금은 원문과 설문만 안전하게 저장할 수 있습니다.");
-        await saveRawState();
-        return;
-      }
-      if (response.status === 401) {
-        setAnalysisState("error");
-        setMessage("AI 분석을 계정에 저장하려면 먼저 로그인해 주세요.");
-        return;
-      }
-      if (!response.ok || !payload.structuredState) throw new Error(payload.error || "analysis failed");
-
-      setStructuredState(payload.structuredState);
-      const next = payload.profile ?? {
-        ...profile,
-        stateText: clean,
-        structuredState: payload.structuredState,
-        completion: computeCompletion(clean, answers),
-      };
-      setProfile(next);
-      writeLocal(next);
-      setAnalysisState("done");
-      setSaveState("saved");
-      setMessage("바이저가 원문을 구조화했습니다. 틀린 항목이 있으면 원문을 수정하고 다시 분석하세요.");
-    } catch (error) {
-      setAnalysisState("error");
-      setMessage(error instanceof Error ? error.message : "상태 분석에 실패했습니다.");
-    }
+    await saveRawState();
+    setMessage("작성한 상태를 저장했습니다. AI 해석은 사용량을 확인한 구매판단에 포함됩니다.");
   }
 
   function setAnswer(question: SurveyQuestion, value: string | number) {
@@ -371,12 +331,12 @@ export function UserModelClient() {
             </div>
             <div className={styles.editorFooter}>
               <small>
-                {aiState === "ready" ? "AI 의미 분석 가능" : aiState === "missing" ? "AI API 연결 전 · 원문 저장만 가능" : "AI 연결 상태 확인 중"}
+                직접 저장은 무료 · AI 해석은 구매판단에 포함
               </small>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button type="button" disabled={!text.trim() || saveState === "saving"} onClick={saveRawState}>원문 저장</button>
                 <button type="button" disabled={!text.trim() || analysisState === "loading"} onClick={analyzeState}>
-                  {analysisState === "loading" ? <><LoaderCircle className="spin" size={15}/> 분석 중</> : <><Sparkles size={15}/> 바이저가 이해하기</>}
+                  {analysisState === "loading" ? <><LoaderCircle className="spin" size={15}/> 분석 중</> : <><Sparkles size={15}/> 내 상태 저장</>}
                 </button>
               </div>
             </div>
@@ -387,8 +347,8 @@ export function UserModelClient() {
           <aside className={styles.insightCard}>
             {!structuredState ? (
               <div className={styles.analysisEmpty}>
-                <span>{aiState === "missing" ? "AI 연결 대기" : "아직 분석 전"}</span>
-                <strong>{aiState === "missing" ? <>API 연결 후<br/>원문을 실제로 이해합니다.</> : <>내 상황을 적고<br/>“바이저가 이해하기”를 눌러주세요.</>}</strong>
+                <span>내 상태 기록</span>
+                <strong>입력한 정보를<br/>다음 판단에 함께 사용합니다.</strong>
                 <p>가짜 분석값이나 미리 정해둔 답을 표시하지 않습니다.</p>
               </div>
             ) : (

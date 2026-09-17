@@ -12,36 +12,16 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import type { ReportData, SubscriptionTier } from "@/lib/buysor-types";
+import type { ReportData } from "@/lib/buysor-types";
 import styles from "./buysor-features.module.css";
 
 type ReportClientProps = { type: "weekly" | "monthly" };
 type LoadState = "loading" | "guest" | "ready" | "error";
 
-const tierCopy: Record<SubscriptionTier, { title: string; summary: string; features: string[] }> = {
-  essential: {
-    title: "Essential",
-    summary: "개인화 구매 판단의 시작",
-    features: ["USER MODEL", "정밀 구매 프로필", "구매 판단·기록"],
-  },
-  plus: {
-    title: "Plus",
-    summary: "판단 기록을 읽는 실제 리포트",
-    features: ["주간·월간 리포트", "BUY·WAIT·SKIP 패턴", "재확인 큐"],
-  },
-  premium: {
-    title: "Premium",
-    summary: "여러 구매를 하나의 전략으로",
-    features: ["Plus 전체", "구매 우선순위", "재판단 타임라인·대안 묶음"],
-  },
-};
-
 export function ReportClient({ type }: ReportClientProps) {
   const [state, setState] = useState<LoadState>("loading");
   const [data, setData] = useState<ReportData | null>(null);
   const [error, setError] = useState("");
-  const [switching, setSwitching] = useState(false);
-  const [previewHost, setPreviewHost] = useState(false);
   const isMonthly = type === "monthly";
 
   const load = useCallback(async () => {
@@ -66,30 +46,11 @@ export function ReportClient({ type }: ReportClientProps) {
   }, [type]);
 
   useEffect(() => {
-    setPreviewHost(location.hostname.includes("-buysor.peon9339.workers.dev"));
     void load();
   }, [load]);
 
-  async function switchTier(tier: SubscriptionTier) {
-    if (!previewHost || switching) return;
-    setSwitching(true);
-    try {
-      const response = await fetch("/api/subscription", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier }),
-      });
-      if (!response.ok) throw new Error("등급 변경 실패");
-      await load();
-    } catch {
-      setError("미리보기 등급을 변경하지 못했습니다.");
-    } finally {
-      setSwitching(false);
-    }
-  }
-
-  const premiumAvailable = data?.tier === "premium";
-  const locked = !data || data.tier === "essential";
+  const premiumAvailable = true;
+  const locked = false;
   const empty = Boolean(data && !data.hasData);
 
   return (
@@ -103,28 +64,6 @@ export function ReportClient({ type }: ReportClientProps) {
           ? "최근 30일의 실제 구매 판단을 묶어 반복 패턴, 보류 이유, 다음 우선순위를 확인합니다."
           : "최근 7일의 실제 판단을 모아 무엇을 샀고, 기다렸고, 건너뛰었는지 정리합니다."}</p>
       </section>
-
-      {previewHost && state === "ready" ? (
-        <section className={styles.tierPreview} aria-label="미리보기 등급 전환">
-          <div className={styles.tierPreviewHead}>
-            <div><span>PREVIEW ONLY</span><strong>등급별 실제 화면 확인</strong></div>
-            <small>이 전환기는 미리보기 주소에서만 보입니다. 운영에서는 결제 상태로 자동 결정됩니다.</small>
-          </div>
-          <div className={styles.tierGrid}>
-            {(Object.keys(tierCopy) as SubscriptionTier[]).map((tier) => {
-              const item = tierCopy[tier];
-              return (
-                <button type="button" className={styles.tierCard} data-active={data?.tier === tier} data-tier={tier} disabled={switching} onClick={() => switchTier(tier)} key={tier}>
-                  <span className={styles.tierName}>{item.title}</span>
-                  <strong>{item.summary}</strong>
-                  <ul>{item.features.map((feature) => <li key={feature}><CheckCircle2 size={13}/>{feature}</li>)}</ul>
-                  <b className={styles.tierBadge}>{data?.tier === tier ? "현재 미리보기" : "화면 전환"}</b>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
 
       {state === "loading" ? <CenteredState icon={<LoaderCircle className="spin" size={25}/>} title="리포트 불러오는 중" body="계정의 실제 구매 판단 기록을 확인하고 있습니다."/> : null}
       {state === "guest" ? <CenteredState icon={<LogIn size={25}/>} title="리포트는 로그인 계정 기준으로 만들어집니다." body="구매 판단 기록과 USER MODEL이 계정에 쌓여야 주간·월간 리포트를 정확하게 계산할 수 있습니다." action={<a className={styles.primaryButton} href={`/login?return_to=${encodeURIComponent(isMonthly ? "/reports/monthly" : "/reports/weekly")}`}><LogIn size={15}/> 로그인</a>}/> : null}
@@ -175,16 +114,6 @@ export function ReportClient({ type }: ReportClientProps) {
             )}
           </div>
 
-          {locked ? (
-            <div className={styles.lockLayer}>
-              <div className={styles.lockCard}>
-                <div className={styles.lockIcon}><LockKeyhole size={21}/></div>
-                <span className={styles.lockTier}>PLUS부터 사용 가능</span>
-                <h2>{isMonthly ? "월간 리포트" : "주간 리포트"} 잠금</h2>
-                <p>Essential에서는 USER MODEL과 개별 구매 판단을 사용합니다. Plus부터 실제 판단 기록을 주간·월간 단위로 묶어 패턴과 재확인 큐를 제공합니다.</p>
-              </div>
-            </div>
-          ) : null}
         </section>
       ) : null}
 
@@ -198,8 +127,8 @@ function PremiumSection({ data, available }: { data: ReportData; available: bool
   return (
     <section className={styles.premiumBlock} data-available={available}>
       <div className={styles.premiumHead}>
-        <div><Crown size={17}/><span>PREMIUM</span><h2>여러 구매를 하나의 우선순위로 정리</h2></div>
-        {!available ? <b>Premium에서 열림</b> : null}
+        <div><Crown size={17}/><span>기록 분석</span><h2>여러 구매를 하나의 우선순위로 정리</h2></div>
+
       </div>
 
       <div className={styles.premiumContent}>
@@ -227,7 +156,7 @@ function PremiumSection({ data, available }: { data: ReportData; available: bool
 
       {premium.riskFlags.length ? <div className={styles.premiumSignalGrid}>{premium.riskFlags.slice(0, 3).map((flag, index) => <div key={flag}><span>주의 {index + 1}</span><strong>확인 필요</strong><p>{flag}</p></div>)}</div> : null}
 
-      {!available ? <div className={styles.premiumLock}><Crown size={20}/><strong>Premium은 개별 구매가 아니라 여러 구매 사이의 우선순위와 타이밍을 관리합니다.</strong><span>Plus의 실제 기록을 기반으로 우선순위, 재판단 일정, 대안 후보와 위험 신호를 한 화면에서 정리합니다.</span></div> : null}
+
     </section>
   );
 }
@@ -236,8 +165,4 @@ function CenteredState({ icon, title, body, action }: { icon: React.ReactNode; t
   return <section className={styles.reportShell}><div style={{ minHeight: 360, display: "grid", placeItems: "center", padding: 24 }}><div style={{ maxWidth: 560, display: "grid", justifyItems: "center", gap: 10, textAlign: "center" }}><span style={{ display: "grid", placeItems: "center", width: 50, height: 50, borderRadius: "50%", background: "var(--surface)", color: "var(--blue)" }}>{icon}</span><h2 style={{ margin: 0, fontSize: 24 }}>{title}</h2><p style={{ margin: 0, color: "var(--muted)", fontSize: 12, lineHeight: 1.7 }}>{body}</p>{action}</div></div></section>;
 }
 
-function placeholderMetrics(monthly: boolean) {
-  return monthly
-    ? [{label:"총 판단",value:"—",note:"최근 30일"},{label:"완료 판단",value:"—",note:"잠금"},{label:"WAIT",value:"—",note:"잠금"},{label:"SKIP",value:"—",note:"잠금"}]
-    : [{label:"총 판단",value:"—",note:"최근 7일"},{label:"BUY",value:"—",note:"잠금"},{label:"WAIT",value:"—",note:"잠금"},{label:"SKIP",value:"—",note:"잠금"}];
-}
+function placeholderMetrics(monthly: boolean) { return []; }

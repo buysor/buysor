@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Camera, Grid2X2, Link2, Type } from "lucide-react";
+import { ArrowRight, Camera, Check, Grid2X2, Link2, Type } from "lucide-react";
 import { usePreferences } from "@/components/preferences-provider";
 import { SiteShell } from "@/components/site-shell";
 import styles from "./home-mobile.module.css";
@@ -30,45 +30,38 @@ export default function Home() {
       <main className={styles.homeMain}>
         <section className={styles.hero}>
           <div className={styles.heroText}>
-            <span className={styles.productName}>BUYSOR</span>
+            <span className={styles.productName}>{ko ? "구매 고민, 이제 하나로." : "One place for every buying decision."}</span>
             <h1>
               {ko ? (
                 <>
-                  <span className={styles.heroTitleLine}>사진 한 장이면</span>
-                  <span className={styles.heroTitleLine}>구매 고민 끝.</span>
+                  <span className={styles.heroTitleLine}>사진 한 장이면,</span>
+                  <span className={`${styles.heroTitleLine} ${styles.heroTitleAccent}`}>구매 결정 끝.</span>
                 </>
               ) : (
                 <>
                   <span className={styles.heroTitleLine}>One photo.</span>
-                  <span className={styles.heroTitleLine}>Decision done.</span>
+                  <span className={`${styles.heroTitleLine} ${styles.heroTitleAccent}`}>Decision done.</span>
                 </>
               )}
             </h1>
             <p>
               {ko
-                ? "전자제품·가전·전동공구까지. 사진이나 링크, 제품명으로 시작하면 제품 정보와 당신의 상황을 함께 보고 BUY · WAIT · SKIP부터 판단합니다."
-                : "Electronics, appliances and power tools. Start with a photo, link or product name and BUYSOR combines product information with your situation to decide BUY · WAIT · SKIP first."}
+                ? "전자제품·가전·전동공구까지. 사진이나 링크, 제품명으로 시작하면 제품 정보와 당신의 상황을 함께 보고 지금 사야 할지, 기다릴지, 사지 않을지 판단합니다."
+                : "Electronics, appliances and power tools. Start with a photo, link or product name and BUYSOR combines product information with your situation to decide whether to buy, wait or skip."}
             </p>
             <div className={styles.heroActions}>
-              <a className={styles.primary} href="/lens"><Camera size={17} /> {ko ? "사진으로 시작하기" : "Start with a photo"}</a>
-              <a className={styles.secondary} href="/category">{ko ? "카테고리 보기" : "Browse categories"} <ArrowRight size={15} /></a>
+              <a className={styles.primary} href="/lens"><Camera size={17} /> {ko ? "사진으로 시작하기" : "Start with a photo"} <ArrowRight size={15} /></a>
+              <a className={styles.secondary} href="/category"><Grid2X2 size={16} /> {ko ? "카테고리 보기" : "Browse categories"} <ArrowRight size={15} /></a>
+            </div>
+            <div className={styles.heroProofs}>
+              <span><Check size={13} /> {ko ? "사진·링크·제품명 모두 가능" : "Photo, link or product name"}</span>
+              <span><Check size={13} /> {ko ? "구매 시점까지 판단" : "Timing included"}</span>
+              <span><Check size={13} /> {ko ? "광고 없는 객관적 분석" : "No sponsored ranking"}</span>
             </div>
           </div>
 
           <div className={styles.heroVisual}>
-            <img src="/buysor-hero-products.svg" alt={ko ? "노트북, 스마트폰, 헤드폰, 전동드릴, 냉장고, 세탁기를 보여주는 BUYSOR 대표 이미지" : "BUYSOR hero showing a laptop, phone, headphones, drill, refrigerator and washer"} />
-            <div className={styles.visualLegend} aria-label={ko ? "지원 카테고리" : "Supported categories"}>
-              <span>{ko ? "전자제품" : "Electronics"}</span>
-              <span>{ko ? "가전" : "Appliances"}</span>
-              <span>{ko ? "전동공구" : "Power tools"}</span>
-            </div>
-            <div className={styles.visualFlow}>
-              <span>{ko ? "사진·링크·제품명" : "PHOTO · LINK · PRODUCT"}</span>
-              <i>→</i>
-              <span>{ko ? "상황 반영" : "USER MODEL"}</span>
-              <i>→</i>
-              <strong>{ko ? "구매 판단" : "DECISION"}</strong>
-            </div>
+            <img src="/buysor-hero-products.svg" alt={ko ? "노트북, 헤드폰, 스마트폰, 전동드릴, 냉장고, 세탁기가 배치된 BUYSOR 구매 판단 대표 이미지" : "BUYSOR visual with a laptop, headphones, smartphone, drill, refrigerator and washing machine"} />
           </div>
         </section>
 

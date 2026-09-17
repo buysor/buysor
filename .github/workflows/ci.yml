@@ -1,39 +1,51 @@
 name: BUYSOR build verification
-
 on:
   push:
-    branches:
-      - main
-      - preview-user-model-reports-mobile
-      - 'release/**'
+    branches: [main, preview-user-model-reports-mobile, 'release/**']
   pull_request:
-
 permissions:
   contents: read
-
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Archive tracked source for review and rollback
-        run: git archive --format=zip --output=buysor-source.zip HEAD
-      - name: Retain source snapshot
-        uses: actions/upload-artifact@v4
-        with:
-          name: buysor-source-${{ github.sha }}
-          path: buysor-source.zip
-          retention-days: 7
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Install
-        run: npm ci
+      - run: npm ci
       - name: Build
-        run: npm run build
+        run: npm run build 2>&1 | tee build.log
+      - name: Type check
+        run: npx tsc --noEmit 2>&1 | tee types.log
       - name: Regression tests
-        run: node --test tests/*.test.mjs
+        if: always()
+        run: node --test tests/*.test.mjs 2>&1 | tee tests.log
+      - name: Install isolated browser verifier
+        run: npm install --no-save --package-lock=false playwright@1.58.2 && npx playwright install --with-deps chromium
+      - name: Browser and local database checks
+        run: |
+          npx wrangler d1 migrations apply DB --local
+          npm run dev -- --port 4173 --host 127.0.0.1 > dev.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          node tests/browser-v7.mjs 2>&1 | tee browser.log
+      - name: Archive verified tracked source
+        if: always()
+        run: git archive --format=zip --output=buysor-source.zip HEAD
+      - name: Retain verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-${{ github.sha }}
+          path: |
+            build.log
+            types.log
+            tests.log
+            browser.log
+            dev.log
+            browser-evidence/
+            buysor-source.zip
+          retention-days: 7

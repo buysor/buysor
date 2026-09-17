@@ -5,7 +5,11 @@ on:
     branches:
       - main
       - preview-user-model-reports-mobile
+      - 'release/**'
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -14,6 +18,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Archive tracked source for review and rollback
+        run: git archive --format=zip --output=buysor-source.zip HEAD
+      - name: Retain source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: buysor-source-${{ github.sha }}
+          path: buysor-source.zip
+          retention-days: 7
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -23,3 +35,5 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+      - name: Regression tests
+        run: node --test tests/*.test.mjs

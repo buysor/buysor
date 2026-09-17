@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" role="img" aria-labelledby="title desc">
+  <title id="title">BUYSOR 구매 판단 대표 비주얼</title>
+  <desc id="desc">노트북, 전동드릴, 냉장고, 세탁기, 스마트폰, 헤드폰이 중앙 렌즈를 둘러싼 고해상도 벡터 비주얼</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="48%" r="68%"><stop offset="0" stop-color="#eef5ff"/><stop offset="1" stop-color="#ffffff"/></radialGradient>
+    <radialGradient id="lens" cx="48%" cy="40%" r="62%"><stop offset="0" stop-color="#4b89ff"/><stop offset=".22" stop-color="#1749b7"/><stop offset=".55" stop-color="#0f245d"/><stop offset="1" stop-color="#071022"/></radialGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".92"/><stop offset="1" stop-color="#dfe9ff" stop-opacity=".5"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8fafc"/><stop offset=".55" stop-color="#cbd5e1"/><stop offset="1" stop-color="#64748b"/></linearGradient>
+    <linearGradient id="phone" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#111827"/><stop offset="1" stop-color="#64748b"/></linearGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#2a4f9b" flood-opacity=".14"/></filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12"/></filter>
+  </defs>
+
+  <rect x="18" y="24" width="1164" height="812" rx="38" fill="url(#bg)"/>
+  <g opacity=".55" stroke="#9fc1ff" fill="none">
+    <ellipse cx="602" cy="428" rx="438" ry="292" stroke-width="2"/>
+    <ellipse cx="602" cy="428" rx="332" ry="220" stroke-width="1.5"/>
+    <circle cx="602" cy="428" r="190" stroke-width="1.5"/>
+  </g>
+  <g stroke="#5b8cff" stroke-width="3" opacity=".7"><line x1="602" y1="84" x2="602" y2="122"/><line x1="602" y1="734" x2="602" y2="772"/><line x1="238" y1="428" x2="276" y2="428"/><line x1="928" y1="428" x2="966" y2="428"/></g>
+
+  <!-- central lens -->
+  <g filter="url(#shadow)">
+    <circle cx="602" cy="428" r="170" fill="#edf3ff" stroke="#c8d8fb" stroke-width="6"/>
+    <circle cx="602" cy="428" r="148" fill="#0a1838" stroke="#90adf0" stroke-width="5"/>
+    <circle cx="602" cy="428" r="128" fill="url(#lens)" stroke="#1e4db4" stroke-width="3"/>
+    <circle cx="602" cy="428" r="96" fill="none" stroke="#2e64d8" stroke-width="2" opacity=".55"/>
+    <circle cx="602" cy="428" r="60" fill="none" stroke="#4d83f5" stroke-width="2" opacity=".7"/>
+    <circle cx="602" cy="428" r="24" fill="#4f8dff"/>
+    <circle cx="602" cy="428" r="10" fill="#a8cbff"/>
+    <path d="M521 340c26-40 68-58 112-48" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round" opacity=".28"/>
+  </g>
+
+  <!-- laptop card -->
+  <g transform="translate(250 118) rotate(-10 145 110)" filter="url(#shadow)">
+    <rect x="0" y="0" width="290" height="220" rx="28" fill="url(#glass)" stroke="#fff" stroke-width="3"/>
+    <rect x="56" y="38" width="178" height="112" rx="10" fill="#0a1737"/>
+    <path d="M63 142 L145 56 L222 138 Z" fill="#1f5ed7" opacity=".85"/>
+    <path d="M38 162h214l-28 22H66z" fill="url(#metal)"/>
+    <rect x="122" y="165" width="48" height="5" rx="2.5" fill="#9aa7bd"/>
+  </g>
+
+  <!-- drill card -->
+  <g transform="translate(760 105) rotate(9 120 120)" filter="url(#shadow)">
+    <rect x="0" y="0" width="240" height="250" rx="28" fill="url(#glass)" stroke="#fff" stroke-width="3"/>
+    <g transform="translate(54 46)">
+      <path d="M28 42h92c20 0 34 13 34 29s-14 29-34 29H69l-7 68H30l8-71c-22-7-36-19-36-31 0-12 9-20 26-24z" fill="#2563eb" stroke="#18315e" stroke-width="5"/>
+      <rect x="108" y="57" width="56" height="24" rx="8" fill="#111827"/>
+      <rect x="164" y="63" width="38" height="12" rx="4" fill="#9ca3af"/>
+      <rect x="20" y="162" width="63" height="28" rx="8" fill="#172033"/>
+      <rect x="43" y="100" width="22" height="64" rx="10" fill="#13203a"/>
+    </g>
+  </g>
+
+  <!-- fridge card -->
+  <g transform="translate(907 294) rotate(6 100 140)" filter="url(#shadow)">
+    <rect x="0" y="0" width="205" height="290" rx="26" fill="url(#glass)" stroke="#fff" stroke-width="3"/>
+    <rect x="56" y="34" width="98" height="214" rx="12" fill="url(#metal)" stroke="#808b9e" stroke-width="3"/>
+    <line x1="105" y1="34" x2="105" y2="156" stroke="#475569" stroke-width="3"/>
+    <line x1="56" y1="156" x2="154" y2="156" stroke="#475569" stroke-width="3"/>
+    <line x1="96" y1="62" x2="96" y2="128" stroke="#334155" stroke-width="5" stroke-linecap="round"/>
+    <line x1="114" y1="62" x2="114" y2="128" stroke="#334155" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <!-- washer card -->
+  <g transform="translate(750 548) rotate(7 120 110)" filter="url(#shadow)">
+    <rect x="0" y="0" width="250" height="220" rx="28" fill="url(#glass)" stroke="#fff" stroke-width="3"/>
+    <rect x="52" y="24" width="150" height="162" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="3"/>
+    <rect x="66" y="38" width="76" height="17" rx="4" fill="#d7dee9"/>
+    <circle cx="128" cy="118" r="52" fill="#1d2739" stroke="#5b6578" stroke-width="7"/>
+    <circle cx="128" cy="118" r="34" fill="#111827" stroke="#8b95a8" stroke-width="3"/>
+    <rect x="157" y="38" width="29" height="12" rx="3" fill="#1f2937"/>
+  </g>
+
+  <!-- phone card -->
+  <g transform="translate(319 552) rotate(-10 105 105)" filter="url(#shadow)">
+    <rect x="0" y="0" width="210" height="205" rx="28" fill="url(#glass)" stroke="#fff" stroke-width="3"/>
+    <rect x="68" y="22" width="76" height="162" rx="18" fill="url(#phone)"/>
+    <rect x="75" y="31" width="62" height="144" rx="13" fill="#0d2454"/>
+    <path d="M82 144c16-34 30-62 55-86v117H75c0-10 2-20 7-31z" fill="#2866dc"/>
+    <circle cx="82" cy="42" r="7" fill="#111827" stroke="#9ca3af" stroke-width="2"/>
+    <circle cx="98" cy="42" r="7" fill="#111827" stroke="#9ca3af" stroke-width="2"/>
+  </g>
+
+  <!-- headphones card -->
+  <g transform="translate(105 325) rotate(-7 115 115)" filter="url(#shadow)">
+    <rect x="0" y="0" width="230" height="230" rx="28" fill="url(#glass)" stroke="#fff" stroke-width="3"/>
+    <path d="M56 125c0-51 27-82 59-82s59 31 59 82" fill="none" stroke="#222b3b" stroke-width="19" stroke-linecap="round"/>
+    <rect x="45" y="112" width="42" height="74" rx="20" fill="#2d3442"/>
+    <rect x="143" y="112" width="42" height="74" rx="20" fill="#2d3442"/>
+    <rect x="52" y="119" width="29" height="58" rx="14" fill="#0f172a"/>
+    <rect x="149" y="119" width="29" height="58" rx="14" fill="#0f172a"/>
+  </g>
+
+  <!-- floating icons -->
+  <g font-family="Arial, sans-serif" font-size="26" font-weight="700" text-anchor="middle">
+    <g transform="translate(470 245)"><rect x="-24" y="-24" width="48" height="48" rx="14" fill="#fff" stroke="#dbe7ff"/><text y="9" fill="#2d6df6">⌁</text></g>
+    <g transform="translate(930 190)"><rect x="-24" y="-24" width="48" height="48" rx="14" fill="#fff" stroke="#dbe7ff"/><text y="9" fill="#2d6df6">⌁</text></g>
+    <g transform="translate(190 470)"><rect x="-24" y="-24" width="48" height="48" rx="14" fill="#fff" stroke="#dbe7ff"/><text y="9" fill="#2d6df6">◉</text></g>
+    <g transform="translate(1032 455)"><rect x="-24" y="-24" width="48" height="48" rx="14" fill="#fff" stroke="#dbe7ff"/><text y="9" fill="#2d6df6">⌂</text></g>
+  </g>
+</svg>

@@ -1,0 +1,75 @@
+<svg width="1200" height="560" viewBox="0 0 1200 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 300) rotate(90) scale(300 520)">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.58" stop-color="#F5F5F7"/>
+      <stop offset="1" stop-color="#ECECF0"/>
+    </radialGradient>
+    <radialGradient id="lensGlass" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(550 205) rotate(58) scale(300)">
+      <stop stop-color="#334B7D"/>
+      <stop offset="0.26" stop-color="#17243F"/>
+      <stop offset="0.62" stop-color="#080D17"/>
+      <stop offset="1" stop-color="#020307"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="405" y1="128" x2="800" y2="465" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FAFAFB"/>
+      <stop offset="0.14" stop-color="#C7C9CF"/>
+      <stop offset="0.34" stop-color="#6D7078"/>
+      <stop offset="0.55" stop-color="#E7E8EA"/>
+      <stop offset="0.76" stop-color="#777A82"/>
+      <stop offset="1" stop-color="#F3F3F4"/>
+    </linearGradient>
+    <linearGradient id="glassEdge" x1="431" y1="144" x2="765" y2="442" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="0.35" stop-color="#A9B7D3" stop-opacity="0.35"/>
+      <stop offset="0.68" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.7"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="470" y1="150" x2="695" y2="370" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.68"/>
+      <stop offset="0.36" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="258" y="20" width="684" height="594" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="32" stdDeviation="38" flood-color="#111827" flood-opacity="0.22"/>
+    </filter>
+    <filter id="blueGlow" x="456" y="136" width="290" height="290" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="560" rx="36" fill="url(#bgGlow)"/>
+  <ellipse cx="600" cy="494" rx="246" ry="28" fill="#111827" fill-opacity="0.08"/>
+
+  <g filter="url(#shadow)">
+    <circle cx="600" cy="277" r="205" fill="url(#metal)"/>
+    <circle cx="600" cy="277" r="187" fill="#0E1016"/>
+    <circle cx="600" cy="277" r="176" fill="url(#lensGlass)"/>
+    <circle cx="600" cy="277" r="176" stroke="url(#glassEdge)" stroke-width="2"/>
+    <circle cx="600" cy="277" r="146" stroke="#C9D5EC" stroke-opacity="0.14" stroke-width="2"/>
+    <circle cx="600" cy="277" r="114" stroke="#91A9D8" stroke-opacity="0.16"/>
+    <circle cx="600" cy="277" r="80" fill="#050912" fill-opacity="0.78" stroke="#FFFFFF" stroke-opacity="0.08"/>
+    <circle cx="600" cy="277" r="42" fill="#03050A"/>
+    <circle cx="600" cy="277" r="17" fill="#0D56FF"/>
+    <circle cx="600" cy="277" r="9" fill="#84B0FF"/>
+    <circle cx="600" cy="277" r="4" fill="#FFFFFF"/>
+    <path d="M467 172C507 129 561 106 621 106C672 106 715 122 747 145C682 132 613 146 555 179C520 199 490 224 465 251C452 222 453 192 467 172Z" fill="url(#shine)"/>
+  </g>
+
+  <g filter="url(#blueGlow)" opacity="0.46">
+    <circle cx="600" cy="277" r="96" fill="#2563EB"/>
+  </g>
+
+  <g opacity="0.72">
+    <path d="M370 277H284" stroke="#A1A1A6" stroke-width="1"/>
+    <circle cx="270" cy="277" r="4" fill="#A1A1A6"/>
+    <path d="M830 277H916" stroke="#A1A1A6" stroke-width="1"/>
+    <circle cx="930" cy="277" r="4" fill="#A1A1A6"/>
+    <text x="170" y="267" fill="#6E6E73" font-family="-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',Arial,sans-serif" font-size="13" font-weight="600" letter-spacing="0.12em">PRODUCT</text>
+    <text x="942" y="267" fill="#6E6E73" font-family="-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',Arial,sans-serif" font-size="13" font-weight="600" letter-spacing="0.12em">YOU</text>
+  </g>
+
+  <g opacity="0.88">
+    <text x="600" y="526" text-anchor="middle" fill="#1D1D1F" font-family="-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="0.18em">BUYSOR LENS</text>
+  </g>
+</svg>

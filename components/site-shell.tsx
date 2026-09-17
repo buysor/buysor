@@ -6,6 +6,7 @@ import {
   CalendarRange,
   ChartNoAxesCombined,
   Flame,
+  Headphones,
   Languages,
   Menu,
   Moon,
@@ -107,6 +108,9 @@ export function SiteShell({ children, compact = false }: SiteShellProps) {
                   </Link>
                   <Link href="/guide" role="menuitem" onClick={() => setMenuOpen(false)}>
                     <BookOpenText size={17} /><div><strong>{ko ? "설명서" : "Guide"}</strong><small>{ko ? "BUYSOR 사용 방법" : "How to use BUYSOR"}</small></div>
+                  </Link>
+                  <Link href="/support" role="menuitem" onClick={() => setMenuOpen(false)}>
+                    <Headphones size={17} /><div><strong>{ko ? "고객지원" : "Support"}</strong><small>{ko ? "상담봇 · 계정 · 오류 문의" : "Chat · account · errors"}</small></div>
                   </Link>
                 </div>
 

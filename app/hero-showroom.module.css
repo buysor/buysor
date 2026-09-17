@@ -1,0 +1,22 @@
+/* Only the homepage artwork changes. Existing content and navigation stay intact. */
+.frame.frame {
+  padding: 0;
+  min-height: 0;
+  align-items: center;
+  overflow: hidden;
+  background: #f4f6f8;
+}
+
+/* The supplied render already contains its own lighting and background. */
+.frame.frame::before {
+  display: none;
+}
+
+.frame.frame img {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  aspect-ratio: 1018 / 617;
+  object-fit: contain;
+}

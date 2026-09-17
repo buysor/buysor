@@ -43,7 +43,7 @@ export default function Home() {
   return (
     <SiteShell>
       <main className={styles.homeMain}>
-        <section className={styles.hero}>
+        <section className={`${styles.hero} ${showroom.stage}`}>
           <div className={styles.heroCopy}>
             <span className={styles.eyebrow}>{ko ? "구매 고민, 이제 하나로." : "One place for every buying decision."}</span>
             <h1>
@@ -73,15 +73,23 @@ export default function Home() {
           </div>
 
           <div className={`${styles.heroVisual} ${showroom.frame}`} aria-hidden="true">
-            <img
-              src="/buysor-home-showroom-20260917.webp"
-              alt=""
-              width={1018}
-              height={617}
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-            />
+            <picture>
+              <source
+                type="image/avif"
+                srcSet="/buysor-studio-v6-1536.avif"
+                width={1536}
+                height={1024}
+              />
+              <img
+                src="/buysor-home-showroom-20260917.webp"
+                alt=""
+                width={1536}
+                height={1024}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </picture>
           </div>
         </section>
 

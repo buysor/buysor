@@ -1,22 +1,56 @@
-/* Only the homepage artwork changes. Existing content and navigation stay intact. */
-.frame.frame {
-  padding: 0;
-  min-height: 0;
-  align-items: center;
-  overflow: hidden;
-  background: #f4f6f8;
+/* Scoped to the home artwork. Do not change shared navigation or billing UI. */
+.stage.stage {
+  background: var(--canvas, #fff);
 }
 
-/* The supplied render already contains its own lighting and background. */
+.frame.frame {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  isolation: isolate;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* The studio asset provides the light and shadow; no tinted box on top. */
 .frame.frame::before {
   display: none;
+}
+
+.frame.frame picture {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  min-width: 0;
+  aspect-ratio: 3 / 2;
+  line-height: 0;
 }
 
 .frame.frame img {
   display: block;
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   height: auto;
-  aspect-ratio: 1018 / 617;
+  aspect-ratio: 3 / 2;
   object-fit: contain;
+  object-position: center;
+  border: 0;
+  border-radius: 0;
+  image-rendering: auto;
+  /* Fade only the empty studio margins, never blur or enlarge the products. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent), linear-gradient(180deg, transparent, #000 4%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent), linear-gradient(180deg, transparent, #000 4%, #000 94%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+@media (max-width: 1080px) {
+  .frame.frame { margin: 0; }
+  .frame.frame picture { max-width: 900px; }
+}
+
+@media (max-width: 760px) {
+  .frame.frame picture { max-width: 640px; }
 }

@@ -1,4 +1,5 @@
 import { getD1Binding } from "@/db";
+import {checkoutReady} from "@/lib/commerce-runtime";
 import { getAiRuntimeStatus } from "@/lib/ai";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +26,10 @@ export async function GET() {
       configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.AUTH_SESSION_SECRET),
     },
     billing: {
-      configured: false,
+      configured: checkoutReady(),
       note: "구독 결제 제공자는 아직 연결되지 않았습니다. 등급 권한 구조는 준비되어 있습니다.",
     },
-  });
+  }, {headers:{"cache-control":"no-store"}});
 }
 
 async function checkDatabase() {
@@ -48,7 +49,7 @@ async function checkDatabase() {
       binding: false,
       ready: false,
       tables: Object.fromEntries(requiredTables.map((name) => [name, false])),
-      error: error instanceof Error ? error.message : "database unavailable",
+      error: "database unavailable",
     };
   }
 }

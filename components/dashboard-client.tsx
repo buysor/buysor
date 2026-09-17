@@ -32,23 +32,26 @@ export function DashboardClient() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [profile, setProfile] = useState<UserModelPayload | null>(null);
   const [history, setHistory] = useState<DecisionHistoryItem[]>([]);
-  const [tier, setTier] = useState<SubscriptionTier>("essential");
+  const [tier, setTier] = useState<SubscriptionTier>("free");
+  const [balance, setBalance] = useState<number | null>(null);
   const [state, setState] = useState<LoadState>("loading");
 
   useEffect(() => {
     let active = true;
     async function load() {
       const settled = await Promise.allSettled([
+        fetch("/api/commerce/status", {cache:"no-store"}).then(async r=>r.ok?r.json():null),
         fetch("/api/attendance", { cache: "no-store" }).then(async (response) => response.ok ? response.json() as Promise<Summary> : null),
         fetch("/api/profile", { cache: "no-store" }).then(async (response) => response.ok ? response.json() as Promise<UserModelPayload> : null),
         fetch("/api/decision?limit=6", { cache: "no-store" }).then(async (response) => response.ok ? response.json() as Promise<{items: DecisionHistoryItem[]}> : { items: [] }),
         fetch("/api/subscription", { cache: "no-store" }).then(async (response) => response.json() as Promise<{tier?: SubscriptionTier}>),
       ]);
       if (!active) return;
-      if (settled[0].status === "fulfilled") setSummary(settled[0].value);
-      if (settled[1].status === "fulfilled") setProfile(settled[1].value);
-      if (settled[2].status === "fulfilled") setHistory(settled[2].value.items ?? []);
-      if (settled[3].status === "fulfilled" && settled[3].value.tier) setTier(settled[3].value.tier);
+      if (settled[0].status === "fulfilled" && settled[0].value?.balance) setBalance(settled[0].value.balance.available);
+      if (settled[1].status === "fulfilled") setSummary(settled[1].value);
+      if (settled[2].status === "fulfilled") setProfile(settled[2].value);
+      if (settled[3].status === "fulfilled") setHistory(settled[3].value.items ?? []);
+      if (settled[4].status === "fulfilled" && settled[4].value.tier) setTier(settled[4].value.tier);
       setState(settled.some((item) => item.status === "fulfilled") ? "ready" : "error");
     }
     void load();
@@ -58,7 +61,7 @@ export function DashboardClient() {
   const completed = useMemo(() => history.filter((item) => item.status === "completed"), [history]);
   const recent = completed.slice(0, 4);
   const profileCompletion = profile?.completion ?? 0;
-  const reportsUnlocked = tier === "plus" || tier === "premium";
+  const reportsUnlocked = true;
 
   return (
     <div className="dashboard-grid">
@@ -73,15 +76,15 @@ export function DashboardClient() {
       </a>
 
       <article className="stat-card credit-card">
-        <span><Coins size={18} /> {ko ? "사용 가능한 보너스" : "Bonus credits"}</span>
-        {summary ? <strong>{summary.bonusCredits}<small>C</small></strong> : state === "loading" ? <LoaderCircle className="spin" size={25} /> : <strong>—</strong>}
-        <p>{summary ? (ko ? `이번 달 최대 ${summary.monthlyCap}C` : `${summary.monthlyCap}C monthly cap`) : (ko ? "잔액을 확인할 수 없음" : "Balance unavailable")}</p>
+        <span><Coins size={18} /> {ko ? "사용 가능한 크레딧" : "Available credits"}</span>
+        {balance !== null ? <strong>{balance}<small>C</small></strong> : state === "loading" ? <LoaderCircle className="spin" size={25} /> : <strong>—</strong>}
+        <p>{balance !== null ? (ko ? "결제로 확인된 사용권" : "Verified credits") : "잔액 확인 중"}</p>
       </article>
 
       <a className="stat-card streak-card" href="/attendance">
         <span><Flame size={18} /> {ko ? "연속 출석" : "Daily streak"}</span>
         {summary ? <strong>{summary.streak}<small>{ko ? "일" : " days"}</small></strong> : state === "loading" ? <LoaderCircle className="spin" size={25} /> : <strong>—</strong>}
-        <p>{summary?.checkedToday ? (ko ? "오늘 룰렛 완료" : "Wheel completed") : (ko ? "오늘의 룰렛 확인" : "Open today’s wheel")} <ArrowRight size={14} /></p>
+        <p>{summary?.checkedToday ? (ko ? "오늘 출석 완료" : "Checked in") : (ko ? "오늘 출석 기록" : "Record today")} <ArrowRight size={14} /></p>
       </a>
 
       <a className="stat-card" href="/profile">
@@ -93,13 +96,13 @@ export function DashboardClient() {
       <a className="stat-card" href="/reports/weekly">
         <span><CalendarDays size={18} /> {ko ? "주간 리포트" : "Weekly report"}</span>
         <strong>{reportsUnlocked ? <CheckCircle2 size={34}/> : <LockKeyhole size={34} />}</strong>
-        <p>{reportsUnlocked ? (ko ? `${tier === "premium" ? "Premium" : "Plus"} · 최근 7일 실제 기록` : "Real 7-day report") : (ko ? "Plus부터 사용 가능" : "Available from Plus")} <ArrowRight size={14} /></p>
+        <p>{reportsUnlocked ? (ko ? `${tier === "member" ? "멤버십" : "기본"} · 최근 7일 실제 기록` : "Real 7-day report") : (ko ? "저장된 기록 요약" : "History summary")} <ArrowRight size={14} /></p>
       </a>
 
       <a className="stat-card" href="/reports/monthly">
         <span><CalendarDays size={18} /> {ko ? "월간 리포트" : "Monthly report"}</span>
         <strong>{reportsUnlocked ? <CheckCircle2 size={34}/> : <LockKeyhole size={34} />}</strong>
-        <p>{reportsUnlocked ? (ko ? "최근 30일 패턴 · 재확인 큐" : "30-day patterns and rechecks") : (ko ? "Plus부터 사용 가능" : "Available from Plus")} <ArrowRight size={14} /></p>
+        <p>{reportsUnlocked ? (ko ? "최근 30일 패턴 · 재확인 큐" : "30-day patterns and rechecks") : (ko ? "저장된 기록 요약" : "History summary")} <ArrowRight size={14} /></p>
       </a>
 
       <article className="empty-card profile-card">

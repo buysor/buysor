@@ -114,7 +114,7 @@ export default function SupportPage() {
                 <Bot size={19} />
                 <div><strong>바이저 상담봇</strong><span>서비스 이용 질문 전용</span></div>
               </div>
-              <span className={styles.aiBadge}>AI 상담</span>
+              <span className={styles.aiBadge}>도움말 상담</span>
             </div>
 
             <div className={styles.messages} aria-live="polite">

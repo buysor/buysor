@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -18,6 +18,8 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import type { DecisionAnswers, DecisionDraft, DecisionResult } from "@/lib/buysor-types";
+import {useCommerce} from "./commerce-client";
+import {FEATURES,POLICY_VERSION} from "@/lib/commerce-policy";
 import styles from "./decision-result.module.css";
 
 type Runtime = { configured: boolean; provider: string | null; model: string | null };
@@ -25,6 +27,10 @@ type Auth = { authenticated: boolean; email?: string };
 type Phase = "loading" | "ready" | "signin" | "missing-ai" | "running" | "result" | "error";
 
 export function DecisionRunner() {
+  const {data:commerce,error:commerceError}=useCommerce();
+  const [consent,setConsent]=useState(false);
+  const requestKey=useRef<string|null>(null);
+  const inFlight=useRef(false);
   const [draft, setDraft] = useState<DecisionDraft | null>(null);
   const [answers, setAnswers] = useState<DecisionAnswers>({});
   const [runtime, setRuntime] = useState<Runtime>({ configured: false, provider: null, model: null });
@@ -93,31 +99,34 @@ export function DecisionRunner() {
   }, [answers]);
 
   async function run() {
-    if (!draft || phase === "running") return;
+    if (!draft || inFlight.current || !consent) return;
+    if (!commerce?.aiReady || !commerce.authenticated || (commerce.balance?.available ?? 0)<FEATURES.standard.credits) {setError("이용 상태와 잔액을 확인해 주세요.");setPhase("error");return;}
+    inFlight.current=true;
+    requestKey.current ??= crypto.randomUUID();
     setPhase("running");
     setError("");
     try {
       const response = await fetch("/api/decision", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ draft, answers }),
+        body: JSON.stringify({ draft, answers,requestKey:requestKey.current,policyVersion:POLICY_VERSION,acceptedCredits:FEATURES.standard.credits,feature:"standard" }),
       });
-      const payload = await response.json() as { error?: string; result?: DecisionResult };
+      const payload = await response.json() as { error?: string; code?:string;requestState?:string; result?: DecisionResult };
       if (response.status === 401) {
         setPhase("signin");
         return;
       }
-      if (response.status === 503 && payload.error === "AI_NOT_CONFIGURED") {
+      if (response.status === 503 && payload.code === "AI_NOT_CONFIGURED") {
         setPhase("missing-ai");
         return;
       }
-      if (!response.ok || !payload.result) throw new Error(payload.error || "구매 판단 생성에 실패했습니다.");
+      if (!response.ok || !payload.result) { if(payload.requestState==="failed"||payload.code==="REQUEST_FAILED")requestKey.current=null;throw new Error(payload.error || "구매 판단 생성에 실패했습니다.");}
       setResult(payload.result);
       setPhase("result");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "구매 판단 생성에 실패했습니다.");
       setPhase("error");
-    }
+    } finally {inFlight.current=false;}
   }
 
   return (
@@ -136,8 +145,8 @@ export function DecisionRunner() {
 
       {phase === "missing-ai" ? (
         <Gate
-          icon={<Sparkles size={25}/>} title="AI 연결만 남았습니다."
-          body="제품·질문·USER MODEL 흐름은 준비되어 있습니다. AI_PROVIDER, AI_MODEL, API Key가 Cloudflare에 연결되면 이 화면에서 실제 판단을 생성합니다. 지금은 가짜 BUY · WAIT · SKIP을 보여주지 않습니다."
+          icon={<Sparkles size={25}/>} title="분석 서비스 준비 중"
+          body="실제 판단 품질과 원가 제한을 검증 중입니다. 이용 준비가 되기 전에는 크레딧을 차감하지 않습니다."
           actions={<><a className={styles.secondary} href="/advisor">조건 다시 보기</a><a className={styles.primary} href="/profile">USER MODEL 확인</a></>}
         />
       ) : null}
@@ -151,11 +160,9 @@ export function DecisionRunner() {
       ) : null}
 
       {phase === "ready" ? (
-        <Gate
-          icon={<ShieldCheck size={25}/>} title="판단할 준비가 됐습니다."
-          body={`AI가 연결되어 있습니다${runtime.provider ? ` · ${runtime.provider}` : ""}. 저장된 USER MODEL과 이번 구매 조건을 함께 사용해 실제 판단을 생성합니다.`}
-          actions={<button type="button" className={styles.primary} onClick={run}><Sparkles size={15}/> 구매 판단 시작 <ArrowRight size={15}/></button>}
-        />
+        <Gate icon={<ShieldCheck size={25}/>} title="시작 전, 사용량을 확인해 주세요."
+          body={`표준 구매판단 ${FEATURES.standard.credits}C. 사진 입력 포함. 사용 가능 ${commerce?.balance?.available ?? '확인 중'}C. 현재는 제공한 정보를 기준으로 판단하며 실시간 시세 자동 검증은 포함하지 않습니다.`}
+          actions={<><label style={{display:'flex',alignItems:'center',gap:8,fontSize:14}}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>{FEATURES.standard.credits}C 사용에 동의합니다.</label><button type="button" className={styles.primary} disabled={!consent||!commerce?.aiReady||(commerce.balance?.available??0)<FEATURES.standard.credits} onClick={run}>10C로 판단 시작 <ArrowRight size={15}/></button><a className={styles.secondary} href="/credits">잔액·충전 확인</a>{commerceError?<p role="alert">{commerceError}</p>:null}</>}/>
       ) : null}
 
       {phase === "running" ? (
@@ -215,7 +222,7 @@ function DecisionView({ result }: { result: DecisionResult }) {
           <span>BUYSOR FINAL DECISION</span>
           <h2>{result.headline}</h2>
           <p>{result.summary}</p>
-          <div className={styles.confidence}><span>판단 확신도 {Math.round(result.confidence)}%</span><i><span style={{width:`${result.confidence}%`}}/></i></div>
+          <div className={styles.confidence}><span>모델 자기평가 {Math.round(result.confidence)}% (검증된 정확도 아님)</span><i><span style={{width:`${result.confidence}%`}}/></i></div>
         </div>
       </div>
 

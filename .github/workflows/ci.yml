@@ -1,25 +1,68 @@
 name: BUYSOR build verification
-
 on:
   push:
-    branches:
-      - main
-      - preview-user-model-reports-mobile
+    branches: [main, preview-user-model-reports-mobile]
   pull_request:
-
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Install
-        run: npm ci
+      - run: npm ci
       - name: Build
-        run: npm run build
+        run: npm run build 2>&1 | tee build.log
+      - name: Type check
+        run: npx tsc --noEmit 2>&1 | tee types.log
+      - name: Regression tests
+        if: always()
+        run: node --test tests/*.test.mjs 2>&1 | tee tests.log
+      - name: Install browser verifier
+        run: npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.58.2 && npx playwright install --with-deps chromium
+      - name: Browser and local database checks
+        run: |
+          # Only this ephemeral emulator checkout needs the older compatibility date.
+          # The deployed configuration and archived tracked source remain unchanged.
+          node --input-type=module -e "import fs from 'node:fs';const p='wrangler.jsonc';const s=fs.readFileSync(p,'utf8');fs.writeFileSync(p,s.replace('2026-09-10','2026-05-22'));"
+          npx wrangler d1 migrations apply DB --local
+          npm run dev -- --port 4173 --host 127.0.0.1 > dev.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          node tests/browser-v7.mjs 2>&1 | tee browser.log
+      - name: Check deployed release with real Cloudflare runtime
+        if: success() && (github.ref == 'refs/heads/main' || github.head_ref == 'release/economics-launch-v7')
+        env:
+          TEST_ORIGIN: ${{ github.ref == 'refs/heads/main' && 'https://buysor.peon9339.workers.dev' || 'https://release-economics-launch-v7-buysor.peon9339.workers.dev' }}
+          EVIDENCE_DIR: deployed-evidence
+        run: node tests/browser-v7.mjs 2>&1 | tee deployed.log
+      - name: Archive verified tracked source
+        if: always()
+        run: git archive --format=zip --output=buysor-source.zip HEAD
+      - name: Retain verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-${{ github.sha }}
+          path: |
+            build.log
+            types.log
+            tests.log
+            browser.log
+            dev.log
+            deployed.log
+            browser-evidence/
+            deployed-evidence/
+            buysor-source.zip
+          retention-days: 7

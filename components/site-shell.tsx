@@ -102,7 +102,7 @@ export function SiteShell({ children, compact = false }: SiteShellProps) {
 
                 <div className={styles.menuGroup}>
                   <span>{ko ? "도구" : "Tools"}</span>
-                  <Link href="/attendance" role="menuitem" onClick={() => setMenuOpen(false)}><Flame size={17} /><div><strong>{ko ? "출석 룰렛" : "Daily wheel"}</strong><small>{ko ? "출석 · 보너스 크레딧" : "Attendance · bonus credits"}</small></div></Link>
+                  <Link href="/attendance" role="menuitem" onClick={() => setMenuOpen(false)}><Flame size={17} /><div><strong>{ko ? "출석 기록" : "Attendance"}</strong><small>{ko ? "방문 기록 · 자동 보상 없음" : "Visit history, no automatic rewards"}</small></div></Link>
                   <Link href="/guide" role="menuitem" onClick={() => setMenuOpen(false)}><BookOpenText size={17} /><div><strong>{ko ? "설명서" : "Guide"}</strong><small>{ko ? "BUYSOR 사용 방법" : "How to use BUYSOR"}</small></div></Link>
                   <Link href="/support" role="menuitem" onClick={() => setMenuOpen(false)}><Headphones size={17} /><div><strong>{ko ? "고객지원" : "Support"}</strong><small>{ko ? "상담봇 · 계정 · 오류 문의" : "Chat · account · errors"}</small></div></Link>
                 </div>

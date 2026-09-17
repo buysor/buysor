@@ -92,27 +92,10 @@ export async function saveUserProfile(user: ChatGPTUser, profile: UserModelPaylo
 
 export async function getSubscriptionTier(user: ChatGPTUser): Promise<SubscriptionTier> {
   await ensureUserRecord(user);
-  const row = await getD1Binding()
-    .prepare(`SELECT tier, status, current_period_end FROM subscriptions WHERE user_id = ? LIMIT 1`)
-    .bind(user.id)
-    .first<{ tier: string; status: string; current_period_end: number | null }>();
-
-  if (!row || row.status !== "active") return "essential";
-  if (row.current_period_end && row.current_period_end < Date.now()) return "essential";
-  return isTier(row.tier) ? row.tier : "essential";
-}
-
-export async function setSubscriptionTierForPreview(user: ChatGPTUser, tier: SubscriptionTier) {
-  await ensureUserRecord(user);
-  const now = Date.now();
-  await getD1Binding()
-    .prepare(
-      `INSERT INTO subscriptions (user_id, tier, status, provider, created_at, updated_at)
-       VALUES (?, ?, 'active', 'preview', ?, ?)
-       ON CONFLICT(user_id) DO UPDATE SET tier = excluded.tier, status = 'active', provider = 'preview', updated_at = excluded.updated_at`,
-    )
-    .bind(user.id, tier, now, now)
-    .run();
+  const row = await getD1Binding().prepare(`SELECT tier,status,provider,current_period_end FROM subscriptions WHERE user_id=? LIMIT 1`)
+    .bind(user.id).first<{tier:string;status:string;provider:string;current_period_end:number|null}>();
+  return row?.tier==='member' && row.status==='active' && row.provider==='toss_verified'
+    && Number(row.current_period_end)>Date.now() ? 'member' : 'free';
 }
 
 export async function createPendingDecision(user: ChatGPTUser, draft: DecisionDraft, answers: DecisionAnswers) {
@@ -155,7 +138,7 @@ export async function completeDecision(user: ChatGPTUser, id: string, result: De
 
 export async function failDecision(user: ChatGPTUser, id: string) {
   await getD1Binding()
-    .prepare(`UPDATE decisions SET status = 'failed', updated_at = ? WHERE id = ? AND user_id = ?`)
+    .prepare(`UPDATE decisions SET status = 'failed', updated_at = ? WHERE id = ? AND user_id = ? AND status = 'pending'`)
     .bind(Date.now(), id, user.id)
     .run();
 }
@@ -252,7 +235,7 @@ export async function getReportData(user: ChatGPTUser, period: "weekly" | "month
 
   return {
     tier,
-    locked: tier === "essential",
+    locked: false,
     period,
     hasData: history.length > 0,
     rangeLabel: period === "weekly" ? "최근 7일" : "최근 30일",
@@ -375,5 +358,5 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isTier(value: string): value is SubscriptionTier {
-  return value === "essential" || value === "plus" || value === "premium";
+  return value === "free" || value === "member";
 }

@@ -1,54 +1,13 @@
-import { Coins, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
-import Link from "next/link";
-import { SiteShell } from "@/components/site-shell";
-import styles from "../pricing/pricing.module.css";
-
-const packs = [
-  { amount: "60C", price: "5,900원", note: "가볍게 추가" },
-  { amount: "180C", price: "14,900원", note: "가장 많이 쓰는 구간" },
-  { amount: "500C", price: "34,900원", note: "깊은 분석을 넉넉하게" },
-];
-
-export default function CreditsPage() {
-  return (
-    <SiteShell compact>
-      <main className={styles.page}>
-        <section className={styles.creditsHero}>
-          <div>
-            <span>BUYSOR CREDIT</span>
-            <h1>필요한 순간에만, 필요한 만큼.</h1>
-            <p>검색과 카테고리 탐색은 무료로 두고, 실제 AI 분석과 판단처럼 비용이 발생하는 기능에만 크레딧을 사용합니다.</p>
-          </div>
-          <div className={styles.balance}><span>내 크레딧</span><strong>— C</strong><small>로그인 후 확인</small></div>
-        </section>
-
-        <div className={styles.notice}>아래 가격과 수량은 현재 시안값입니다. 결제 연동 전이며, 실제 판매가는 API 원가 검증 후 최종 확정됩니다.</div>
-
-        <section className={styles.packGrid} aria-label="크레딧 충전 팩">
-          {packs.map((pack) => (
-            <article className={styles.pack} key={pack.amount}>
-              <Coins size={24} />
-              <strong>{pack.amount}</strong>
-              <span>{pack.price}</span>
-              <p>{pack.note}</p>
-              <Link href="/login?return_to=/credits">구매 준비하기</Link>
-            </article>
-          ))}
-        </section>
-
-        <section className={styles.usageStrip}>
-          <div><span>Lens</span><strong>1C</strong></div>
-          <div><span>제품검색·카테고리</span><strong>0C</strong></div>
-          <div><span>구매판단</span><strong>8C</strong></div>
-          <div><span>동일 건 재판단</span><strong>4C</strong></div>
-        </section>
-
-        <section className={styles.policy}>
-          <div><ShieldCheck size={18}/><strong>보너스 먼저 사용</strong><p>무료 보상 크레딧을 먼저 소진하고, 유료 크레딧은 뒤에 사용하도록 설계합니다.</p></div>
-          <div><TimerReset size={18}/><strong>유효기간 분리</strong><p>보너스와 유료 크레딧의 만료 정책을 분리해 사용자가 손해 보지 않게 관리합니다.</p></div>
-          <div><Sparkles size={18}/><strong>원가 기반 조정</strong><p>AI 모델 가격이 바뀌어도 서비스 전체 가격을 갈아엎지 않고 기능별 C만 조정할 수 있습니다.</p></div>
-        </section>
-      </main>
-    </SiteShell>
-  );
-}
+"use client";
+import Link from 'next/link';
+import { SiteShell } from '@/components/site-shell';
+import { BillingHistory,CheckoutButton,CommerceNotice } from '@/components/commerce-client';
+import { CREDIT_PACKS, FEATURES, formatKRW } from '@/lib/commerce-policy';
+import s from '../pricing/pricing.module.css';
+export default function CreditsPage(){return <SiteShell compact><main className={s.page}>
+ <header className={s.hero}><span>필요한 순간에만</span><h1>구독 없이,<br/>구매 고민만 해결하세요.</h1><p>사용권은 계정에 보관됩니다. 사진을 넣은 표준 판단은 총 {FEATURES.standard.credits}C. 중간에 몰래 더 차감하지 않습니다.</p></header>
+ <CommerceNotice/>
+ <section className={s.planGrid} aria-label="단품 사용권">{CREDIT_PACKS.map(p=><article className={s.planCard} key={p.id}><span>{p.name}</span><h2>{p.credits/FEATURES.standard.credits}번의 표준 판단</h2><div className={s.price}>{formatKRW(p.price)}</div><p>{p.credits}C · 부가세 포함</p><p>구독·자동 충전 없음<br/>같은 결과 다시 보기는 무료</p><CheckoutButton productId={p.id}/></article>)}</section>
+ <section className={s.rules}><h2>한 번의 판단에 포함되는 것</h2><p>하나의 구매 고민과 사진 1장, 저장된 내 정보, 결론·근거·대안을 함께 봅니다. 최신 시세가 확인되지 않으면 확인필요로 표시합니다.</p><p>심층 {FEATURES.deep.credits}C·재판단 {FEATURES.rejudge.credits}C·Lens 단독 {FEATURES.lens.credits}C는 검증 후 열릴 기능입니다. 아직 사용 가능한 기능으로 판매하지 않습니다.</p><Link href="/usage-policy">사용권·환불 가이드 보기</Link></section>
+ <BillingHistory/><Link href="/pricing">자주 사용하나요? 월 멤버십 보기 →</Link>
+ </main></SiteShell>;}

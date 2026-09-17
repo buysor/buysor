@@ -1,3 +1,4 @@
+import {assertSameOrigin,boundedJson,errorResponse} from '@/lib/request-safety';
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import type { UserModelPayload } from "@/lib/buysor-types";
 import { getUserProfile, saveUserProfile } from "@/lib/user-data";
@@ -20,7 +21,8 @@ export async function PUT(request: Request) {
   if (!user) return Response.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
   try {
-    const body = await request.json() as Partial<UserModelPayload>;
+    assertSameOrigin(request);
+    const body = await boundedJson(request,40000) as Partial<UserModelPayload>;
     const current = await getUserProfile(user);
     const next: UserModelPayload = {
       stateText: typeof body.stateText === "string" ? body.stateText : current.stateText,

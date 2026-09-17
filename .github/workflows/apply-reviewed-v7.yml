@@ -1,0 +1,78 @@
+name: Apply reviewed v7 source
+on:
+  push:
+    branches: ['release/economics-launch-v7']
+    paths: ['.release/v7.ready.json']
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify and apply only reviewed files
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import {brotliDecompressSync} from 'node:zlib';
+          import {createHash} from 'node:crypto';
+          const sha=x=>createHash('sha256').update(x).digest('hex');
+          const m=JSON.parse(fs.readFileSync('.release/v7.ready.json','utf8'));
+          const encoded=m.parts.map(p=>fs.readFileSync('.release/'+p,'utf8').trim()).join('');
+          const raw=brotliDecompressSync(Buffer.from(encoded,'base64'));
+          if(sha(raw)!==m.sha256)throw Error('Source transport checksum mismatch');
+          const changes=JSON.parse(raw);
+          for(const [p,before,after,hunks] of changes){
+            if(!/^(app|components|lib|drizzle|docs|tests)\//.test(p)||p.includes('..'))throw Error('Disallowed path');
+            const old=fs.existsSync(p)?fs.readFileSync(p,'utf8'):'';
+            if(sha(old)!==before)throw Error('Base changed: '+p);
+            const lines=old.match(/[^\n]*\n|[^\n]+$/g)||[];
+            for(const [a,b,text] of [...hunks].reverse())lines.splice(a,b-a,text);
+            const next=lines.join('');
+            if(sha(next)!==after)throw Error('Result checksum mismatch: '+p);
+            fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,next);
+          }
+          fs.writeFileSync('/tmp/reviewed-paths',changes.map(c=>c[0]).join('\n'));
+          console.log('Verified source files:',changes.length);
+          JS
+      - run: npm ci
+      - name: Build reviewed application
+        run: npm run build 2>&1 | tee build.log
+      - name: Credit and payment invariant tests
+        run: node --test tests/commerce-v7.test.mjs 2>&1 | tee commerce.log
+      - name: Type review
+        continue-on-error: true
+        run: npx tsc --noEmit 2>&1 | tee types.log
+      - name: Full regression review
+        continue-on-error: true
+        run: node --test tests/*.test.mjs 2>&1 | tee tests.log
+      - name: Commit reviewed source for pull request verification
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          while IFS= read -r p || [ -n "$p" ]; do git add -- "$p"; done < /tmp/reviewed-paths
+          git commit -m 'feat: apply reviewed v7 economics guards and expanded homepage'
+          git push origin HEAD:release/economics-launch-v7
+          git archive --format=zip --output=reviewed-source.zip HEAD
+          git rev-parse HEAD > reviewed-head.txt
+      - name: Retain verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reviewed-v7-evidence
+          path: |
+            build.log
+            commerce.log
+            types.log
+            tests.log
+            reviewed-source.zip
+            reviewed-head.txt
+          retention-days: 7

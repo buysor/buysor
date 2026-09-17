@@ -1,0 +1,407 @@
+.main {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 56px;
+}
+
+.intro {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.intro h1 {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.02;
+  letter-spacing: -.045em;
+}
+
+.intro p {
+  margin: 10px 0 0;
+  max-width: 620px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.trustRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.trustRow span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 250px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.sidebar,
+.chatPanel,
+.contactCard {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+}
+
+.sidebar {
+  padding: 16px;
+}
+
+.sidebar h2,
+.contactCard h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.sidebar button {
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 13px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.sidebar button:hover {
+  background: var(--surface);
+}
+
+.sidebar button span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.chatPanel {
+  display: flex;
+  min-height: 560px;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.chatHeader > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chatHeader strong,
+.chatHeader span {
+  display: block;
+}
+
+.chatHeader strong {
+  font-size: 14px;
+}
+
+.chatHeader div div span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.aiBadge {
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--surface) 42%, transparent);
+}
+
+.assistantRow,
+.userRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.userRow {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.bubble,
+.loadingBubble {
+  max-width: min(82%, 620px);
+  padding: 11px 13px;
+  border-radius: 14px;
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.assistantRow .bubble,
+.loadingBubble {
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.userRow .bubble {
+  background: var(--blue);
+  color: white;
+}
+
+.loadingBubble {
+  color: var(--muted);
+}
+
+.suggestions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px 0;
+  overflow-x: auto;
+}
+
+.suggestions button {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 8px;
+  padding: 12px 14px 8px;
+}
+
+.composer textarea {
+  min-height: 52px;
+  max-height: 130px;
+  resize: vertical;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  outline: none;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.composer textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 12%, transparent);
+}
+
+.composer button {
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: var(--blue);
+  color: white;
+  cursor: pointer;
+}
+
+.composer button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.privacy {
+  padding: 0 15px 13px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.contactCard {
+  align-self: start;
+  padding: 18px;
+}
+
+.contactCard > svg {
+  color: var(--blue);
+}
+
+.contactCard h2 {
+  margin-top: 10px;
+}
+
+.contactCard p,
+.contactCard small {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.contactCard p {
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+
+.contactCard a {
+  display: block;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: var(--blue);
+  color: white;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.contactCard small {
+  display: block;
+  margin-top: 10px;
+  font-size: 11px;
+}
+
+.handoff {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+
+  .contactCard {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .main {
+    width: min(100% - 20px, 680px);
+    padding-top: 18px;
+  }
+
+  .intro {
+    display: block;
+  }
+
+  .trustRow {
+    justify-content: flex-start;
+    margin-top: 14px;
+  }
+
+  .grid {
+    display: block;
+  }
+
+  .sidebar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .sidebar h2 {
+    grid-column: 1 / -1;
+  }
+
+  .sidebar button {
+    margin: 0;
+    background: var(--surface);
+  }
+
+  .chatPanel {
+    min-height: 620px;
+  }
+
+  .contactCard {
+    margin-top: 10px;
+  }
+
+  .bubble,
+  .loadingBubble {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 460px) {
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .trustRow span {
+    font-size: 12px;
+  }
+
+  .messages {
+    padding: 14px 10px;
+  }
+
+  .suggestions {
+    padding-inline: 10px;
+  }
+
+  .composer {
+    padding-inline: 10px;
+  }
+}

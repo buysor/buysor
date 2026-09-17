@@ -13,6 +13,7 @@ import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
 import { usePreferences } from "@/components/preferences-provider";
 import styles from "./home-mobile.module.css";
+import showroom from "./hero-showroom.module.css";
 
 const features = [
   {
@@ -71,13 +72,16 @@ export default function Home() {
             </div>
           </div>
 
-          <div className={styles.heroVisual} aria-hidden="true">
-            <div className={styles.visualCopy}>
-              <span>{ko ? "더 좋은 선택이" : "Better choices"}</span>
-              <strong>{ko ? "더 좋은 일상을 만듭니다." : "make everyday better."}</strong>
-              <i>BUYSOR</i>
-            </div>
-            <img src="/buysor-home-products.svg" alt="" />
+          <div className={`${styles.heroVisual} ${showroom.frame}`} aria-hidden="true">
+            <img
+              src="/buysor-home-showroom-20260917.webp"
+              alt=""
+              width={1018}
+              height={617}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
           </div>
         </section>
 

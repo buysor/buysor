@@ -1,3 +1,4 @@
+"use client";
 import Link from 'next/link';
 import { SiteShell } from '@/components/site-shell';
 import { BillingHistory,CheckoutButton,CommerceNotice } from '@/components/commerce-client';

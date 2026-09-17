@@ -1,3 +1,4 @@
+"use client";
 import Link from 'next/link';
 import { SiteShell } from '@/components/site-shell';
 import { CommerceNotice } from '@/components/commerce-client';

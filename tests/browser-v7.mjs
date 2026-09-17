@@ -14,11 +14,14 @@ try{
   const layout=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,images:[...document.images].map(i=>({src:i.currentSrc,ok:i.complete&&i.naturalWidth>0}))}));
   assert.ok(layout.width<=width+2,JSON.stringify(layout));assert.ok(layout.height>2200);assert.ok(layout.images.every(i=>i.ok));
   await page.screenshot({path:`${evidence}/home-${width}.png`,fullPage:true});
-  const menu=page.locator('button[aria-haspopup="menu"]');await menu.click();
+  await page.locator('button[aria-haspopup="menu"]').click();
   await page.locator('[role="menu"] a[href="/credits"]').click();await page.waitForURL('**/credits');await page.waitForLoadState('networkidle');
+  await page.getByRole('button',{name:'결제 준비 중',exact:true}).first().waitFor({timeout:20000});
   assert.ok((await page.locator('main').innerText()).includes('1,900'));assert.equal(await page.locator('main button:disabled').count(),3);
   await page.screenshot({path:`${evidence}/credits-${width}.png`,fullPage:true});
-  await page.goto(origin+'/pricing',{waitUntil:'networkidle'});assert.equal(await page.locator('main button:disabled').count(),1);assert.equal(await page.locator('main [class*="planCard"]').count(),1);
+  await page.goto(origin+'/pricing',{waitUntil:'networkidle'});
+  await page.getByRole('status').filter({hasText:'공개 준비 버전'}).waitFor({timeout:20000});
+  assert.equal(await page.locator('main button:disabled').count(),1);assert.equal(await page.locator('main [class*="planCard"]').count(),1);
   await page.screenshot({path:`${evidence}/membership-${width}.png`,fullPage:true});
   if(width===1440){await page.goto(origin,{waitUntil:'networkidle'});await page.evaluate(()=>localStorage.setItem('buysor-theme','dark'));await page.reload({waitUntil:'networkidle'});await page.screenshot({path:`${evidence}/home-dark.png`,fullPage:true});}
   assert.deepEqual(errors,[]);results.push({width,layout,status:'passed'});await context.close();
@@ -28,5 +31,5 @@ try{
  const denied=await fetch(origin+'/api/decision',{method:'POST',headers:{origin,'content-type':'application/json'},body:'{}'});assert.equal(denied.status,401);
  const preview=await fetch(origin+'/api/subscription',{method:'POST'});assert.equal(preview.status,405);
  await writeFile(`${evidence}/results.json`,JSON.stringify({results,status,unauthenticatedDecision:denied.status,disabledTierSwitch:preview.status},null,2));
- console.log('Browser checks passed at 1440, 768 and 390 pixels; live billing/AI disabled.');
+ console.log('Browser checks passed at 1440, 768 and 390 pixels; live billing/AI disabled and ready-state hydrated.');
 }finally{await browser.close();}

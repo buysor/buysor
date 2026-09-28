@@ -303,8 +303,8 @@ function sanitizeProfile(profile: UserModelPayload): UserModelPayload {
   return {
     stateText: typeof profile.stateText === "string" ? profile.stateText.trim().slice(0, 6000) : "",
     structuredState: profile.structuredState ?? null,
-    survey: survey as Record<string, string | number>,
-    categoryProfiles: categoryProfiles as Record<string, Record<string, string | number>>,
+    survey: survey as UserModelPayload["survey"],
+    categoryProfiles: categoryProfiles as UserModelPayload["categoryProfiles"],
     completion: clampInt(profile.completion, 0, 100),
   };
 }

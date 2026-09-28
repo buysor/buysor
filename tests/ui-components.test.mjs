@@ -83,3 +83,28 @@ test("renders sidebar skeletons deterministically", async () => {
   assert.equal(first, second);
   assert.match(first, /--skeleton-width:70%/);
 });
+
+
+test("supports multi-select profile answers and multiple category deep surveys", async () => {
+  const {
+    GENERAL_SURVEY,
+    getSurveySteps,
+    nextSurveyAnswer,
+  } = await vite.ssrLoadModule("/lib/user-model-survey.ts");
+
+  const environment = GENERAL_SURVEY.find((step) => step.id === "environment");
+  const place = environment.questions.find((question) => question.id === "place");
+  assert.equal(place.multiple, true);
+
+  let answer = nextSurveyAnswer(place, undefined, "집");
+  answer = nextSurveyAnswer(place, answer, "사무실");
+  assert.deepEqual(answer, ["집", "사무실"]);
+  answer = nextSurveyAnswer(place, answer, "복합");
+  assert.deepEqual(answer, ["복합"]);
+  answer = nextSurveyAnswer(place, answer, "복합");
+  assert.deepEqual(answer, []);
+
+  const stepIds = getSurveySteps({ category: ["노트북", "전동공구"] }).map((step) => step.id);
+  assert.ok(stepIds.includes("category-laptop"));
+  assert.ok(stepIds.includes("category-tool"));
+});

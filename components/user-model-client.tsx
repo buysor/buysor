@@ -11,10 +11,12 @@ import {
   SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
-import type { StructuredUserState, UserModelPayload } from "@/lib/buysor-types";
+import type { StructuredUserState, SurveyAnswer, UserModelPayload } from "@/lib/buysor-types";
 import {
+  getCategoryForStepId,
   getSurveyQuestionCount,
   getSurveySteps,
+  nextSurveyAnswer,
   type SurveyQuestion,
 } from "@/lib/user-model-survey";
 import styles from "./buysor-features.module.css";
@@ -33,6 +35,46 @@ const EMPTY_PROFILE: UserModelPayload = {
 };
 
 const EXAMPLE_TEXT = "다음 달 이사 예정이고 예산은 150만원 정도예요. 지금 M1 맥북에어를 쓰는데 영상편집이 느립니다. 중고도 괜찮고 급하지 않아서 한두 달 기다릴 수 있어요. 2~3년은 쓰고 싶습니다.";
+const PROFILE_STORAGE_KEY = "buysor-user-model";
+const PROFILE_PENDING_SYNC_KEY = "buysor-user-model-pending-sync";
+
+function isAnswered(value: SurveyAnswer | undefined) {
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "string") return value.trim().length > 0;
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function hasProfileData(profile: UserModelPayload) {
+  return Boolean(profile.stateText.trim()) || Object.values(profile.survey ?? {}).some(isAnswered);
+}
+
+function mergePendingProfile(server: UserModelPayload, local: UserModelPayload): UserModelPayload {
+  const categoryProfiles: UserModelPayload["categoryProfiles"] = { ...(server.categoryProfiles ?? {}) };
+  for (const [category, values] of Object.entries(local.categoryProfiles ?? {})) {
+    categoryProfiles[category] = { ...(categoryProfiles[category] ?? {}), ...values };
+  }
+  const survey = { ...(server.survey ?? {}), ...(local.survey ?? {}) };
+  const stateText = local.stateText.trim() ? local.stateText : server.stateText;
+  const merged: UserModelPayload = {
+    stateText,
+    structuredState: local.structuredState ?? server.structuredState,
+    survey,
+    categoryProfiles,
+    completion: 0,
+  };
+  merged.completion = computeCompletion(merged.stateText, merged.survey);
+  return merged;
+}
+
+async function putProfile(next: UserModelPayload) {
+  const response = await fetch("/api/profile", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(next),
+  });
+  if (!response.ok) throw new Error("save failed");
+  return response.json() as Promise<UserModelPayload>;
+}
 
 function QuestionHelp({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
@@ -74,7 +116,7 @@ export function PersonalizationBanner() {
       } catch {}
 
       try {
-        const raw = localStorage.getItem("buysor-user-model");
+        const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
         if (!raw || !active) return;
         const profile = JSON.parse(raw) as UserModelPayload;
         setProgress(Number(profile.completion ?? 0));
@@ -121,7 +163,7 @@ export function UserModelClient() {
   const steps = useMemo(() => getSurveySteps(answers), [answers]);
   const current = steps[Math.min(step, steps.length - 1)];
   const totalQuestions = getSurveyQuestionCount(answers);
-  const answeredCount = Object.keys(answers).filter((key) => answers[key] !== "" && answers[key] !== undefined).length;
+  const answeredCount = Object.values(answers).filter(isAnswered).length;
   const surveyPercent = totalQuestions ? Math.min(100, Math.round((answeredCount / totalQuestions) * 100)) : 0;
   const overallCompletion = Math.min(100, Math.round((text.trim() ? 20 : 0) + (surveyPercent * 0.8)));
 
@@ -132,9 +174,11 @@ export function UserModelClient() {
     let active = true;
     async function load() {
       let local: UserModelPayload = EMPTY_PROFILE;
+      let pendingSync = false;
       try {
-        const raw = localStorage.getItem("buysor-user-model");
+        const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
         if (raw) local = { ...EMPTY_PROFILE, ...JSON.parse(raw) } as UserModelPayload;
+        pendingSync = localStorage.getItem(PROFILE_PENDING_SYNC_KEY) === "1";
       } catch {}
 
       try {
@@ -151,14 +195,34 @@ export function UserModelClient() {
           setAuthState("authenticated");
           const serverResponse = await fetch("/api/profile", { cache: "no-store" });
           if (serverResponse.ok) {
-            const server = await serverResponse.json() as UserModelPayload;
-            const resolved = server.completion > 0 || server.stateText || Object.keys(server.survey ?? {}).length
-              ? { ...EMPTY_PROFILE, ...server }
-              : local;
+            const server = { ...EMPTY_PROFILE, ...(await serverResponse.json() as UserModelPayload) };
+            let resolved = hasProfileData(server) ? server : local;
+
+            if (pendingSync && hasProfileData(local)) {
+              const merged = mergePendingProfile(server, local);
+              try {
+                resolved = await putProfile(merged);
+                localStorage.removeItem(PROFILE_PENDING_SYNC_KEY);
+                if (!active) return;
+                setSaveState("saved");
+                setMessage("로그인 완료 · 작성한 프로필을 계정에 그대로 저장했습니다.");
+              } catch {
+                resolved = merged;
+                if (!active) return;
+                setSaveState("error");
+                setMessage("로그인은 완료됐지만 계정 동기화에 실패했습니다. 입력 내용은 이 브라우저에 그대로 남아 있습니다.");
+              }
+            } else if (!hasProfileData(server) && hasProfileData(local)) {
+              try {
+                resolved = await putProfile(local);
+              } catch {}
+            }
+
+            if (!active) return;
             setProfile(resolved);
             setText(resolved.stateText ?? "");
             setStructuredState(resolved.structuredState ?? null);
-            if (resolved === local && local.completion > 0) void persistProfile(local, true);
+            writeLocal(resolved);
             return;
           }
         } else {
@@ -184,12 +248,13 @@ export function UserModelClient() {
   }, [step, steps.length]);
 
   function writeLocal(next: UserModelPayload) {
-    try { localStorage.setItem("buysor-user-model", JSON.stringify(next)); } catch {}
+    try { localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ ...next, updatedAt: Date.now() })); } catch {}
   }
 
   async function persistProfile(next: UserModelPayload, silent = false) {
     writeLocal(next);
     if (authState !== "authenticated") {
+      try { localStorage.setItem(PROFILE_PENDING_SYNC_KEY, "1"); } catch {}
       if (!silent) {
         setSaveState("saved");
         setMessage("이 브라우저에 임시 저장했습니다. 로그인하면 계정에 동기화됩니다.");
@@ -199,13 +264,7 @@ export function UserModelClient() {
 
     if (!silent) setSaveState("saving");
     try {
-      const response = await fetch("/api/profile", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(next),
-      });
-      if (!response.ok) throw new Error("save failed");
-      const saved = await response.json() as UserModelPayload;
+      const saved = await putProfile(next);
       setProfile(saved);
       writeLocal(saved);
       if (!silent) {
@@ -245,11 +304,12 @@ export function UserModelClient() {
   }
 
   function setAnswer(question: SurveyQuestion, value: string | number) {
-    const nextAnswers = { ...answers, [question.id]: value };
-    const category = typeof nextAnswers.category === "string" ? nextAnswers.category : "";
+    const nextValue = nextSurveyAnswer(question, answers[question.id], value);
+    const nextAnswers = { ...answers, [question.id]: nextValue };
+    const category = getCategoryForStepId(current.id);
     const categoryProfiles = { ...(profile.categoryProfiles ?? {}) };
-    if (current.id.startsWith("category-") && category) {
-      categoryProfiles[category] = { ...(categoryProfiles[category] ?? {}), [question.id]: value };
+    if (category) {
+      categoryProfiles[category] = { ...(categoryProfiles[category] ?? {}), [question.id]: nextValue };
     }
     const next: UserModelPayload = {
       ...profile,
@@ -266,13 +326,29 @@ export function UserModelClient() {
   }
 
   async function goNext() {
-    await persistProfile({ ...profile, stateText: text, structuredState, completion: overallCompletion }, true);
+    const next = { ...profile, stateText: text, structuredState, completion: overallCompletion };
     if (step < steps.length - 1) {
+      await persistProfile(next, true);
       setStep((value) => value + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    await persistProfile({ ...profile, stateText: text, structuredState, completion: overallCompletion });
+
+    writeLocal(next);
+    if (authState === "loading") {
+      setMessage("로그인 상태를 확인하고 있습니다. 잠시 후 다시 눌러주세요.");
+      return;
+    }
+    if (authState === "guest") {
+      try { localStorage.setItem(PROFILE_PENDING_SYNC_KEY, "1"); } catch {}
+      setSaveState("saved");
+      setMessage("작성한 프로필을 보관했습니다. 로그인 후 계정에 그대로 저장합니다.");
+      const returnTo = "/profile?tab=survey&resume=1";
+      window.location.assign(`/login?return_to=${encodeURIComponent(returnTo)}`);
+      return;
+    }
+
+    await persistProfile(next);
   }
 
   const traits = useMemo(() => {
@@ -377,14 +453,21 @@ export function UserModelClient() {
               {current.questions.map((question) => (
                 <div className={styles.question} key={question.id}>
                   <div className={helpStyles.questionHead}>
-                    <strong>{question.label}</strong>
+                    <div className={helpStyles.questionLabel}>
+                      <strong>{question.label}</strong>
+                      {question.multiple ? <span className={helpStyles.multiBadge}>복수 선택 가능</span> : null}
+                    </div>
                     <QuestionHelp text={question.help}/>
                   </div>
                   {question.kind === "choice" ? (
                     <div className={styles.choiceGrid}>
-                      {(question.options ?? []).map((option) => (
-                        <button key={option} data-selected={answers[question.id] === option} onClick={() => setAnswer(question, option)}>{option}</button>
-                      ))}
+                      {(question.options ?? []).map((option) => {
+                        const answer = answers[question.id];
+                        const selected = Array.isArray(answer) ? answer.includes(option) : answer === option;
+                        return (
+                          <button type="button" key={option} aria-pressed={selected} data-selected={selected} onClick={() => setAnswer(question, option)}>{option}</button>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className={styles.scaleRow}>
@@ -404,7 +487,7 @@ export function UserModelClient() {
               </div>
               <div className={helpStyles.surveyButtons}>
                 <button disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}><ChevronLeft size={15}/> 이전</button>
-                <button onClick={goNext}>{step === steps.length - 1 ? "프로필 저장" : "다음"} <ChevronRight size={15}/></button>
+                <button onClick={goNext}>{step === steps.length - 1 ? (authState === "guest" ? "로그인하고 저장" : "프로필 저장") : "다음"} {step === steps.length - 1 && authState === "guest" ? <LogIn size={15}/> : <ChevronRight size={15}/>}</button>
               </div>
             </div>
           </section>
@@ -425,9 +508,9 @@ export function UserModelClient() {
   );
 }
 
-function computeCompletion(text: string, answers: Record<string, string | number>) {
+function computeCompletion(text: string, answers: Record<string, SurveyAnswer>) {
   const total = getSurveyQuestionCount(answers);
-  const answered = Object.keys(answers).filter((key) => answers[key] !== "" && answers[key] !== undefined).length;
+  const answered = Object.values(answers).filter(isAnswered).length;
   const surveyPercent = total ? Math.min(100, (answered / total) * 100) : 0;
   return Math.min(100, Math.round((text.trim() ? 20 : 0) + (surveyPercent * 0.8)));
 }

@@ -1,6 +1,7 @@
 export type SubscriptionTier = "free" | "member";
 export type DecisionVerdict = "BUY" | "WAIT" | "SKIP";
 export type DecisionInputType = "photo" | "link" | "name" | "category";
+export type SurveyAnswer = string | number | string[];
 
 export type StructuredUserState = {
   currentProduct: string | null;
@@ -20,8 +21,8 @@ export type StructuredUserState = {
 export type UserModelPayload = {
   stateText: string;
   structuredState: StructuredUserState | null;
-  survey: Record<string, string | number>;
-  categoryProfiles: Record<string, Record<string, string | number>>;
+  survey: Record<string, SurveyAnswer>;
+  categoryProfiles: Record<string, Record<string, SurveyAnswer>>;
   completion: number;
   updatedAt?: number;
 };

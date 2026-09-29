@@ -37,3 +37,16 @@ test('used credits cannot enter an automatic full refund',async()=>{const {db}=a
 test('untrusted origins, malformed JSON and oversized streaming bodies are rejected',async()=>{assert.throws(()=>safety.assertSameOrigin(new Request('https://buysor.test/x',{headers:{origin:'https://evil.test'}})));await assert.rejects(()=>safety.boundedJson(new Request('https://buysor.test',{method:'POST',headers:{'content-type':'application/json'},body:'not json'})));await assert.rejects(()=>safety.boundedJson(new Request('https://buysor.test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify('x'.repeat(50))}),10),e=>e.status===413);});
 test('no random signup award, no legacy deletion and no public tier switch remain',()=>{const attendance=read('lib/attendance.ts');assert.doesNotMatch(attendance,/DELETE FROM (credit_ledger|attendance)/);assert.doesNotMatch(attendance,/VALUES\s*\(\?,\s*8\b/);assert.match(read('app/api/subscription/route.ts'),/405/);assert.doesNotMatch(read('lib/support-chat.ts'),/api\.openai\.com|api\.anthropic\.com/);});
 test('home has useful sections without invented customer endorsements',()=>{const source=read('components/home-story.tsx');for(const id of ['how-it-works','decision-example','simple-pricing'])assert.ok(source.includes(id));assert.match(source,/FAQ/);assert.doesNotMatch(source,/5M users|100k 5-star|4\.9 rating/);});
+
+
+test('beta trial credits are allowlist-only, capped, one-time, and disabled by default', async()=>{
+ const f=fixture();const st=await f.store();await st.commerceDb();
+ delete process.env.BUYSOR_BETA_EMAILS;delete process.env.BUYSOR_BETA_TRIAL_CREDITS;
+ assert.equal(await st.grantBetaTrialIfAllowed('u1','a@test.com'),false);
+ process.env.BUYSOR_BETA_EMAILS='a@test.com';process.env.BUYSOR_BETA_TRIAL_CREDITS='10';
+ assert.equal(await st.grantBetaTrialIfAllowed('u1','a@test.com'),true);
+ assert.equal((await st.wallet('u1')).available,10);
+ await st.grantBetaTrialIfAllowed('u1','a@test.com');
+ assert.equal((await st.wallet('u1')).available,10);
+ assert.equal(await st.grantBetaTrialIfAllowed('u2','b@test.com'),false);
+});

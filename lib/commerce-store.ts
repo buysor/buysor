@@ -15,6 +15,16 @@ export async function commerceDb(): Promise<DB> {
  })().catch(error=>{ready=null;throw error;});
  await ready; return db;
 }
+export async function grantBetaTrialIfAllowed(userId:string,email:string) {
+ const allowlist=(process.env.BUYSOR_BETA_EMAILS||'').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean);
+ const credits=Number(process.env.BUYSOR_BETA_TRIAL_CREDITS||'0');
+ if(!allowlist.includes(email.trim().toLowerCase())||!Number.isSafeInteger(credits)||credits<=0||credits>30)return false;
+ const db=await commerceDb();const now=Date.now();const expiresAt=now+30*86_400_000;
+ await db.prepare(`INSERT OR IGNORE INTO credit_lots(id,user_id,kind,granted,available,expires_at,source_key,created_at)
+  VALUES(?,?,?,?,?,?,?,?)`).bind('beta-trial-v1:'+userId,userId,'bonus',credits,credits,expiresAt,'beta-trial-v1:'+userId,now).run();
+ return true;
+}
+
 export async function wallet(userId:string) {
  const db=await commerceDb(); const now=Date.now();
  // Preserve pre-policy, non-expired balances exactly once. No retroactive confiscation.

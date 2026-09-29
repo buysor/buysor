@@ -53,6 +53,8 @@ export type DecisionAlternative = {
   reason: string;
 };
 
+export type DecisionEvidenceSource = { title: string; url: string };
+
 export type DecisionResult = {
   verdict: DecisionVerdict;
   headline: string;
@@ -72,6 +74,7 @@ export type DecisionResult = {
   missingInformation: string[];
   userModelUsed: string[];
   recheckAt: string | null;
+  evidenceSources: DecisionEvidenceSource[];
 };
 
 export type DecisionHistoryItem = {

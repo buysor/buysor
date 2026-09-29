@@ -5,6 +5,7 @@ import type {
   DecisionAnswers,
   DecisionDraft,
   DecisionResult,
+  DecisionEvidenceSource,
   StructuredUserState,
   UserModelPayload,
 } from "@/lib/buysor-types";
@@ -28,6 +29,7 @@ type AiCall = {
   maxTokens?: number;
   reserveMicro: number;
   onUsage: (usage:{micro:number;input:number;output:number;providerId:string})=>Promise<void>;
+  webSearch?: boolean;
 };
 
 const userStateSchema: JsonSchema = {
@@ -134,7 +136,8 @@ If current market facts are missing, identify the missing information instead of
 The supplied URLs are unverified user references, not retrieved pages. There is no live web search in this task. Never claim to have searched or checked a current price. Clearly label this evidence boundary. A BUY verdict may include one top pick only when enough evidence exists. If evidence is insufficient, set topPick to null and explain what must be checked.
 WAIT must state what event, price, timing, or information should trigger a re-check. SKIP must explain why buying is unnecessary or harmful right now.
 Provide three meaningful scenarios where evidence permits: keep current product, buy a suitable new product, consider used or wait. Do not fabricate product names to meet a count. State trade-offs clearly. Do not optimize for affiliate conversion. Optimize for user fit and avoiding unnecessary purchases.
-Write all user-facing text in Korean unless the supplied language is English.`;
+Write all user-facing text strictly in the requested language. Never mix Korean into an English result unless it is part of a product or brand name.
+When web search is available, use it to verify current model existence, official specifications, current pricing signals, release timing, warranty/service facts, and other market facts. Prefer official manufacturer pages and reputable retailers. If current facts cannot be verified, say so instead of guessing.`;
 
 export function getAiRuntimeStatus(): AiRuntimeStatus {
  const config=runtimeConfig();return {configured:config.configured,provider:config.configured?'openai':null,model:config.model};
@@ -145,6 +148,7 @@ export async function generateDecision(input: {
   answers: DecisionAnswers;
   userModel: UserModelPayload | null;
   feature?: Feature;
+  language?: "ko" | "en";
   reserveMicro: number;
   onUsage: (usage:{micro:number;input:number;output:number;providerId:string})=>Promise<void>;
 }): Promise<DecisionResult> {
@@ -159,30 +163,37 @@ export async function generateDecision(input: {
     },
     answers: input.answers,
     userModel: input.userModel,
+    language: input.language ?? "ko",
   };
 
-  const result = await callJson<DecisionResult>({
+  const response = await callJson<DecisionResult>({
     schemaName: "buysor_decision",
     schema: decisionSchema,
     system: BUYSOR_SYSTEM,
-    user: `다음 입력을 바탕으로 구매 판단을 생성하세요. 제공되지 않은 현재 시세·출시 정보·실재 모델 정보는 만들어내지 마세요.\n\n${JSON.stringify(payload, null, 2)}`,
+    user: `${input.language === "en" ? "Create the purchase decision in English." : "구매 판단은 한국어로 작성하세요."}
+Use web search for current product and market facts when needed. Distinguish verified facts from inference. Do not claim an exact current price unless the search evidence supports it.
+
+${JSON.stringify(payload, null, 2)}`,
     imageDataUrl: input.draft.imageDataUrl,
     maxTokens: FEATURES[input.feature ?? 'standard'].maxOutput,
     reserveMicro: input.reserveMicro,
     onUsage: input.onUsage,
+    webSearch: true,
   });
 
-  return sanitizeDecision(result);
+  const result = sanitizeDecision(response.data);
+  result.evidenceSources = response.sources;
+  return result;
 }
 
 
-async function callJson<T>(call: AiCall): Promise<T> {
+async function callJson<T>(call: AiCall): Promise<{data:T;sources:DecisionEvidenceSource[]}> {
  const status=getAiRuntimeStatus();if(!status.configured||!status.model)throw new AiNotConfiguredError();
  const model=status.model;
  // A deliberately conservative preflight bound; no automatic retries or paid tools.
  const textBytes=new TextEncoder().encode(call.system+call.user+JSON.stringify(call.schema)).byteLength;
  const upperInput=textBytes+4096+(call.imageDataUrl?8192:0);
- const upper=costMicroUSD(model,upperInput,call.maxTokens??2800);
+ const upper=costMicroUSD(model,upperInput,call.maxTokens??2800)+(call.webSearch?30000:0);
  if(upper>call.reserveMicro)throw new PublicError(413,'ANALYSIS_BUDGET_EXCEEDED','입력을 줄이거나 심층 판단을 선택해 주세요. 크레딧은 복원됩니다.');
  const content: Array<Record<string,unknown>>=[{type:'input_text',text:call.user}];
  if(call.imageDataUrl)content.unshift({type:'input_image',image_url:call.imageDataUrl,detail:'low'});
@@ -192,6 +203,7 @@ async function callJson<T>(call: AiCall): Promise<T> {
   method:'POST',headers:{authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'content-type':'application/json'},
   signal:controller.signal,body:JSON.stringify({model,store:false,instructions:call.system,
    input:[{role:'user',content}],max_output_tokens:call.maxTokens??2800,
+   ...(call.webSearch?{tools:[{type:'web_search',search_context_size:'low'}],tool_choice:'auto',include:['web_search_call.action.sources']}:{}),
    text:{format:{type:'json_schema',name:call.schemaName,strict:true,schema:call.schema}}})
  });
  if(!response.ok)throw new PublicError(502,'AI_PROVIDER_FAILED','분석 제공자 연결에 실패했습니다. 크레딧은 복원됩니다.');
@@ -199,11 +211,31 @@ async function callJson<T>(call: AiCall): Promise<T> {
  const usage=body.usage as {input_tokens?:number;output_tokens?:number}|undefined;
  if(usage && Number.isSafeInteger(usage.input_tokens) && Number.isSafeInteger(usage.output_tokens)) {
    const input=usage.input_tokens!;const output=usage.output_tokens!;
-   await call.onUsage({micro:costMicroUSD(model,input,output),input,output,providerId:String(body.id??'').slice(0,200)});
+   const searchCalls=Array.isArray(body.output)?body.output.filter((item)=>isRecord(item)&&item.type==='web_search_call').length:0;
+   await call.onUsage({micro:costMicroUSD(model,input,output)+(searchCalls*10000),input,output,providerId:String(body.id??'').slice(0,200)});
  }
  if(body.status==='incomplete')throw new PublicError(502,'AI_INCOMPLETE','분석을 마치지 못했습니다. 크레딧은 복원됩니다.');
- return parseJson<T>(extractOpenAiText(body));
+ const data=parseJson<T>(extractOpenAiText(body));
+ return {data,sources:extractWebSources(body)};
  } finally {clearTimeout(timeout);}
+}
+
+function extractWebSources(body: Record<string, unknown>): DecisionEvidenceSource[] {
+  const out: DecisionEvidenceSource[] = [];
+  const seen = new Set<string>();
+  const output = Array.isArray(body.output) ? body.output : [];
+  for (const item of output) {
+    if (!isRecord(item) || item.type !== "web_search_call" || !isRecord(item.action) || !Array.isArray(item.action.sources)) continue;
+    for (const source of item.action.sources) {
+      if (!isRecord(source) || typeof source.url !== "string" || !/^https:\/\//i.test(source.url) || seen.has(source.url)) continue;
+      seen.add(source.url);
+      let title = typeof source.title === "string" && source.title.trim() ? source.title.trim().slice(0,180) : source.url;
+      try { if (title === source.url) title = new URL(source.url).hostname; } catch {}
+      out.push({title,url:source.url.slice(0,1200)});
+      if(out.length>=8)return out;
+    }
+  }
+  return out;
 }
 
 function normalizeProvider(value: string | undefined): AiProvider | null {
@@ -287,6 +319,7 @@ function sanitizeDecision(value: DecisionResult): DecisionResult {
     userModelUsed: stringArray(value.userModelUsed),
     waitFor: nullableText(value.waitFor),
     recheckAt: nullableText(value.recheckAt),
+    evidenceSources: Array.isArray(value.evidenceSources) ? value.evidenceSources : [],
   };
 }
 

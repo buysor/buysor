@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { DecisionAnswers, DecisionDraft, DecisionResult } from "@/lib/buysor-types";
 import {useCommerce} from "./commerce-client";
+import {usePreferences} from "@/components/preferences-provider";
 import {FEATURES,POLICY_VERSION} from "@/lib/commerce-policy";
 import styles from "./decision-result.module.css";
 
@@ -27,6 +28,8 @@ type Auth = { authenticated: boolean; email?: string };
 type Phase = "loading" | "ready" | "signin" | "missing-ai" | "running" | "result" | "error";
 
 export function DecisionRunner() {
+  const {language}=usePreferences();
+  const ko=language==="ko";
   const {data:commerce,error:commerceError}=useCommerce();
   const [consent,setConsent]=useState(false);
   const requestKey=useRef<string|null>(null);
@@ -109,7 +112,7 @@ export function DecisionRunner() {
       const response = await fetch("/api/decision", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ draft, answers,requestKey:requestKey.current,policyVersion:POLICY_VERSION,acceptedCredits:FEATURES.standard.credits,feature:"standard" }),
+        body: JSON.stringify({ draft, answers,language,requestKey:requestKey.current,policyVersion:POLICY_VERSION,acceptedCredits:FEATURES.standard.credits,feature:"standard" }),
       });
       const payload = await response.json() as { error?: string; code?:string;requestState?:string; result?: DecisionResult };
       if (response.status === 401) {
@@ -180,7 +183,7 @@ export function DecisionRunner() {
         />
       ) : null}
 
-      {phase === "result" && result ? <DecisionView result={result}/> : null}
+      {phase === "result" && result ? <DecisionView result={result} ko={ko}/> : null}
     </div>
   );
 }
@@ -213,7 +216,7 @@ function Gate({ icon, title, body, actions }: { icon: React.ReactNode; title: st
   );
 }
 
-function DecisionView({ result }: { result: DecisionResult }) {
+function DecisionView({ result, ko }: { result: DecisionResult; ko: boolean }) {
   return (
     <section className={styles.resultCard}>
       <div className={styles.verdict}>
@@ -222,7 +225,7 @@ function DecisionView({ result }: { result: DecisionResult }) {
           <span>BUYSOR FINAL DECISION</span>
           <h2>{result.headline}</h2>
           <p>{result.summary}</p>
-          <div className={styles.confidence}><span>모델 자기평가 {Math.round(result.confidence)}% (검증된 정확도 아님)</span><i><span style={{width:`${result.confidence}%`}}/></i></div>
+          <div className={styles.confidence}><span>{ko?"모델 자기평가":"Model self-assessment"} {Math.round(result.confidence)}% {ko?"(검증된 정확도 아님)":"(not validated accuracy)"}</span><i><span style={{width:`${result.confidence}%`}}/></i></div>
         </div>
       </div>
 
@@ -235,8 +238,8 @@ function DecisionView({ result }: { result: DecisionResult }) {
         ) : null}
 
         <div className={styles.grid}>
-          <ResultList icon={<CheckCircle2 size={14}/>} title="이 결론의 핵심 근거" items={result.reasons}/>
-          <ResultList icon={<AlertTriangle size={14}/>} title="감수해야 할 트레이드오프" items={result.tradeoffs}/>
+          <ResultList icon={<CheckCircle2 size={14}/>} title={ko?"이 결론의 핵심 근거":"Why this decision"} items={result.reasons}/>
+          <ResultList icon={<AlertTriangle size={14}/>} title={ko?"감수해야 할 트레이드오프":"Trade-offs"} items={result.tradeoffs}/>
         </div>
 
         {result.waitFor || result.recheckAt ? <div className={styles.recheck}><Clock3 size={17}/><div><strong>다시 판단할 조건</strong><div>{result.waitFor || "조건 변화 시 재확인"}{result.recheckAt ? ` · ${result.recheckAt}` : ""}</div></div></div> : null}
@@ -249,11 +252,12 @@ function DecisionView({ result }: { result: DecisionResult }) {
         ) : null}
 
         <div className={styles.grid}>
-          {result.missingInformation.length ? <ResultList icon={<TriangleAlert size={14}/>} title="확인되지 않은 정보" items={result.missingInformation}/> : null}
-          {result.userModelUsed.length ? <ResultList icon={<ShieldCheck size={14}/>} title="이번 판단에 반영된 내 조건" items={result.userModelUsed}/> : null}
+          {result.missingInformation.length ? <ResultList icon={<TriangleAlert size={14}/>} title={ko?"확인되지 않은 정보":"Unverified information"} items={result.missingInformation}/> : null}
+          {result.userModelUsed.length ? <ResultList icon={<ShieldCheck size={14}/>} title={ko?"이번 판단에 반영된 내 조건":"Your conditions used"} items={result.userModelUsed}/> : null}
         </div>
 
-        <div className={styles.footer}><span>판단 결과는 계정 기록에 저장됩니다.</span><a className={styles.secondary} href="/my">내 바이저에서 기록 보기</a></div>
+        {result.evidenceSources?.length ? <article className={styles.section}><div className={styles.sectionHead}><Search size={14}/>{ko?"웹 근거":"Web evidence"}</div><ul className={styles.list}>{result.evidenceSources.map((source)=><li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul></article> : null}
+        <div className={styles.footer}><span>{ko?"판단 결과는 계정 기록에 저장됩니다.":"The decision is saved to your account history."}</span><a className={styles.secondary} href="/my">{ko?"내 바이저에서 기록 보기":"View history"}</a></div>
       </div>
     </section>
   );

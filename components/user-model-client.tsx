@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePreferences } from "@/components/preferences-provider";
+import { getOptionLabel, getQuestionCopy, getStepCopy } from "@/lib/user-model-locale";
 import {
   CheckCircle2,
   ChevronLeft,
@@ -98,6 +100,8 @@ function QuestionHelp({ text }: { text: string }) {
 }
 
 export function PersonalizationBanner() {
+  const { language } = usePreferences();
+  const ko = language === "ko";
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("아직 시작하지 않음");
 
@@ -110,7 +114,7 @@ export function PersonalizationBanner() {
           const profile = await fetch("/api/profile", { cache: "no-store" }).then((response) => response.json()) as UserModelPayload;
           if (!active) return;
           setProgress(Number(profile.completion ?? 0));
-          setStatus(profile.completion > 0 ? "계정에 저장됨 · 이어하기 가능" : "아직 시작하지 않음");
+          setStatus(profile.completion > 0 ? (ko ? "계정에 저장됨 · 이어하기 가능" : "Saved to your account · resume anytime") : (ko ? "아직 시작하지 않음" : "Not started yet"));
           return;
         }
       } catch {}
@@ -120,34 +124,36 @@ export function PersonalizationBanner() {
         if (!raw || !active) return;
         const profile = JSON.parse(raw) as UserModelPayload;
         setProgress(Number(profile.completion ?? 0));
-        setStatus(profile.completion > 0 ? "이 브라우저에 임시 저장됨" : "아직 시작하지 않음");
+        setStatus(profile.completion > 0 ? (ko ? "이 브라우저에 임시 저장됨" : "Temporarily saved in this browser") : (ko ? "아직 시작하지 않음" : "Not started yet"));
       } catch {}
     }
     void load();
     return () => { active = false; };
-  }, []);
+  }, [ko]);
 
   return (
     <section className={styles.personalBanner}>
       <div>
         <span className="section-kicker">PERSONAL DECISION MODEL</span>
-        <h2>바이저가 나를 더 정확히 이해하게 만들기</h2>
-        <p>현재 상황과 구매 기준을 알려주면 제품만 보지 않고 당신의 조건까지 다음 구매 판단에 자동 반영합니다.</p>
+        <h2>{ko ? "바이저가 나를 더 정확히 이해하게 만들기" : "Help BUYSOR understand you better"}</h2>
+        <p>{ko ? "현재 상황과 구매 기준을 알려주면 제품만 보지 않고 당신의 조건까지 다음 구매 판단에 자동 반영합니다." : "Tell us your situation and buying criteria so future decisions reflect you, not just the product."}</p>
         <div className={styles.bannerActions}>
-          <a className={styles.primaryButton} href="/profile?tab=state"><MessageSquareText size={16}/> 지금 내 상태 말하기</a>
-          <a className={styles.secondaryButton} href="/profile?tab=survey"><SlidersHorizontal size={16}/> 정밀 구매 프로필 설정</a>
+          <a className={styles.primaryButton} href="/profile?tab=state"><MessageSquareText size={16}/> {ko ? "지금 내 상태 말하기" : "Describe my situation"}</a>
+          <a className={styles.secondaryButton} href="/profile?tab=survey"><SlidersHorizontal size={16}/> {ko ? "정밀 구매 프로필 설정" : "Build detailed profile"}</a>
         </div>
       </div>
       <div className={styles.profileSummary}>
-        <div className={styles.summaryRow}><span>구매 프로필 완성도</span><strong>{progress}%</strong></div>
+        <div className={styles.summaryRow}><span>{ko ? "구매 프로필 완성도" : "Profile completion"}</span><strong>{progress}%</strong></div>
         <div className={styles.progressTrack}><span style={{ width: `${progress}%` }}/></div>
-        <div className={styles.summaryRow}><span>상태</span><span>{status}</span></div>
+        <div className={styles.summaryRow}><span>{ko ? "상태" : "Status"}</span><span>{status}</span></div>
       </div>
     </section>
   );
 }
 
 export function UserModelClient() {
+  const { language } = usePreferences();
+  const ko = language === "ko";
   const [tab, setTab] = useState<"state" | "survey">("state");
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [aiState, setAiState] = useState<AiState>("loading");
@@ -162,6 +168,7 @@ export function UserModelClient() {
   const answers = profile.survey ?? {};
   const steps = useMemo(() => getSurveySteps(answers), [answers]);
   const current = steps[Math.min(step, steps.length - 1)];
+  const currentCopy = getStepCopy(current, language);
   const totalQuestions = getSurveyQuestionCount(answers);
   const answeredCount = Object.values(answers).filter(isAnswered).length;
   const surveyPercent = totalQuestions ? Math.min(100, Math.round((answeredCount / totalQuestions) * 100)) : 0;
@@ -205,12 +212,12 @@ export function UserModelClient() {
                 localStorage.removeItem(PROFILE_PENDING_SYNC_KEY);
                 if (!active) return;
                 setSaveState("saved");
-                setMessage("로그인 완료 · 작성한 프로필을 계정에 그대로 저장했습니다.");
+                setMessage(ko ? "로그인 완료 · 작성한 프로필을 계정에 그대로 저장했습니다." : "Signed in · your profile was saved to your account.");
               } catch {
                 resolved = merged;
                 if (!active) return;
                 setSaveState("error");
-                setMessage("로그인은 완료됐지만 계정 동기화에 실패했습니다. 입력 내용은 이 브라우저에 그대로 남아 있습니다.");
+                setMessage(ko ? "로그인은 완료됐지만 계정 동기화에 실패했습니다. 입력 내용은 이 브라우저에 그대로 남아 있습니다." : "You are signed in, but account sync failed. Your profile is still safe in this browser.");
               }
             } else if (!hasProfileData(server) && hasProfileData(local)) {
               try {
@@ -257,7 +264,7 @@ export function UserModelClient() {
       try { localStorage.setItem(PROFILE_PENDING_SYNC_KEY, "1"); } catch {}
       if (!silent) {
         setSaveState("saved");
-        setMessage("이 브라우저에 임시 저장했습니다. 로그인하면 계정에 동기화됩니다.");
+        setMessage(ko ? "이 브라우저에 임시 저장했습니다. 로그인하면 계정에 동기화됩니다." : "Temporarily saved in this browser. Sign in to sync it to your account.");
       }
       return true;
     }
@@ -269,13 +276,13 @@ export function UserModelClient() {
       writeLocal(saved);
       if (!silent) {
         setSaveState("saved");
-        setMessage("계정에 저장했습니다.");
+        setMessage(ko ? "계정에 저장했습니다." : "Saved to your account.");
       }
       return true;
     } catch {
       if (!silent) {
         setSaveState("error");
-        setMessage("계정 저장에 실패했습니다. 입력 내용은 이 브라우저에 임시 보관했습니다.");
+        setMessage(ko ? "계정 저장에 실패했습니다. 입력 내용은 이 브라우저에 임시 보관했습니다." : "Account save failed. Your input is temporarily preserved in this browser.");
       }
       return false;
     }
@@ -300,7 +307,7 @@ export function UserModelClient() {
 
   async function analyzeState() {
     await saveRawState();
-    setMessage("작성한 상태를 저장했습니다. AI 해석은 사용량을 확인한 구매판단에 포함됩니다.");
+    setMessage(ko ? "저장 완료 · 실제 AI 해석은 구매판단을 실행할 때 함께 진행합니다." : "Saved · AI interpretation runs together with an actual purchase decision.");
   }
 
   function setAnswer(question: SurveyQuestion, value: string | number) {
@@ -336,13 +343,13 @@ export function UserModelClient() {
 
     writeLocal(next);
     if (authState === "loading") {
-      setMessage("로그인 상태를 확인하고 있습니다. 잠시 후 다시 눌러주세요.");
+      setMessage(ko ? "로그인 상태를 확인하고 있습니다. 잠시 후 다시 눌러주세요." : "Checking sign-in status. Please try again in a moment.");
       return;
     }
     if (authState === "guest") {
       try { localStorage.setItem(PROFILE_PENDING_SYNC_KEY, "1"); } catch {}
       setSaveState("saved");
-      setMessage("작성한 프로필을 보관했습니다. 로그인 후 계정에 그대로 저장합니다.");
+      setMessage(ko ? "작성한 프로필을 보관했습니다. 로그인 후 계정에 그대로 저장합니다." : "Your profile is preserved. Sign in and it will be saved to your account.");
       const returnTo = "/profile?tab=survey&resume=1";
       window.location.assign(`/login?return_to=${encodeURIComponent(returnTo)}`);
       return;
@@ -379,53 +386,53 @@ export function UserModelClient() {
   return (
     <div className={styles.profilePage}>
       <section className={styles.profileHero}>
-        <div><span className="section-kicker">MY USER MODEL</span><h1>나를 이해할수록<br/>판단은 더 정확해집니다.</h1></div>
-        <p>현재 상황, 보유 제품, 환경, 과거 구매, 예산, 미래 계획을 하나의 USER MODEL로 묶어 모든 구매 판단에 자동 반영합니다.</p>
+        <div><span className="section-kicker">MY USER MODEL</span><h1>{ko ? <>나를 이해할수록<br/>판단은 더 정확해집니다.</> : <>Better context.<br/>Better decisions.</>}</h1></div>
+        <p>{ko ? "현재 상황, 보유 제품, 환경, 과거 구매, 예산, 미래 계획을 하나의 USER MODEL로 묶어 모든 구매 판단에 자동 반영합니다." : "Your situation, products, environment, purchase history, budget and future plans become one USER MODEL for every decision."}</p>
       </section>
 
       <div className={styles.tabs}>
-        <button data-active={tab === "state"} onClick={() => setTab("state")}>지금 내 상태 말하기</button>
-        <button data-active={tab === "survey"} onClick={() => setTab("survey")}>정밀 구매 프로필</button>
+        <button data-active={tab === "state"} onClick={() => setTab("state")}>{ko ? "지금 내 상태 말하기" : "Current situation"}</button>
+        <button data-active={tab === "survey"} onClick={() => setTab("survey")}>{ko ? "정밀 구매 프로필" : "Detailed profile"}</button>
       </div>
 
       {tab === "state" ? (
         <section className={styles.profilePanel}>
           <article className={styles.editorCard}>
-            <h2>지금 어떤 상황인가요?</h2>
-            <p>형식 없이 편하게 적으세요. AI가 연결되어 있을 때만 실제 의미 분석을 수행하며, 없는 정보는 임의로 만들어내지 않습니다.</p>
+            <h2>{ko ? "지금 어떤 상황인가요?" : "What is your situation right now?"}</h2>
+            <p>{ko ? "형식 없이 편하게 적으세요. 저장은 무료이며 실제 AI 해석은 구매판단을 실행할 때 함께 진행합니다." : "Write naturally. Saving is free; AI interpretation happens when you run an actual purchase decision."}</p>
             <textarea
               className={styles.stateTextarea}
               value={text}
               maxLength={6000}
               onChange={(event) => updateText(event.target.value)}
-              placeholder="예: 현재 쓰는 제품, 불편한 점, 편한 예산과 최대 예산, 중고 가능 여부, 언제 필요한지, 사용 환경, 앞으로의 계획 등을 자유롭게 적어주세요."
+              placeholder={ko ? "예: 현재 쓰는 제품, 불편한 점, 편한 예산과 최대 예산, 중고 가능 여부, 언제 필요한지, 사용 환경, 앞으로의 계획 등을 자유롭게 적어주세요." : "e.g. what you use now, pain points, comfortable/max budget, used-product openness, timing, environment and future plans"}
             />
             <div className={styles.exampleRow}>
-              <button type="button" onClick={() => updateText(EXAMPLE_TEXT)}>예시 한번 넣어보기</button>
-              {text ? <button type="button" onClick={() => updateText("")}>비우기</button> : null}
-              <span>예시는 자동 저장되지 않으며 직접 입력한 내용만 USER MODEL에 반영합니다.</span>
+              <button type="button" onClick={() => updateText(EXAMPLE_TEXT)}>{ko ? "예시 한번 넣어보기" : "Insert example"}</button>
+              {text ? <button type="button" onClick={() => updateText("")}>{ko ? "비우기" : "Clear"}</button> : null}
+              <span>{ko ? "예시는 자동 저장되지 않으며 직접 입력한 내용만 USER MODEL에 반영합니다." : "The example is not saved automatically; only your actual input is used."}</span>
             </div>
             <div className={styles.editorFooter}>
               <small>
-                직접 저장은 무료 · AI 해석은 구매판단에 포함
+                {ko ? "직접 저장은 무료 · AI 해석은 구매판단에 포함" : "Saving is free · AI interpretation is included in a purchase decision"}
               </small>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button type="button" disabled={!text.trim() || saveState === "saving"} onClick={saveRawState}>원문 저장</button>
+                <button type="button" disabled={!text.trim() || saveState === "saving"} onClick={saveRawState}>{ko ? "원문 저장" : "Save notes"}</button>
                 <button type="button" disabled={!text.trim() || analysisState === "loading"} onClick={analyzeState}>
-                  {analysisState === "loading" ? <><LoaderCircle className="spin" size={15}/> 분석 중</> : <><Sparkles size={15}/> 내 상태 저장</>}
+                  {analysisState === "loading" ? <><LoaderCircle className="spin" size={15}/> {ko ? "저장 중" : "Saving"}</> : <><Sparkles size={15}/> {ko ? "저장하고 구매판단에 반영" : "Save for future decisions"}</>}
                 </button>
               </div>
             </div>
             {message ? <p style={{ marginTop: 12, fontSize: 12, color: saveState === "error" || analysisState === "error" ? "var(--red)" : "var(--muted)" }}>{message}</p> : null}
-            {authState === "guest" ? <a href="/login?return_to=%2Fprofile" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, fontSize: 12, fontWeight: 800, color: "var(--blue)" }}><LogIn size={14}/> 로그인하면 모든 기기에서 프로필을 이어갈 수 있습니다.</a> : null}
+            {authState === "guest" ? <a href="/login?return_to=%2Fprofile" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, fontSize: 12, fontWeight: 800, color: "var(--blue)" }}><LogIn size={14}/> {ko ? "로그인하면 모든 기기에서 프로필을 이어갈 수 있습니다." : "Sign in to continue this profile on any device."}</a> : null}
           </article>
 
           <aside className={styles.insightCard}>
             {!structuredState ? (
               <div className={styles.analysisEmpty}>
-                <span>내 상태 기록</span>
-                <strong>입력한 정보를<br/>다음 판단에 함께 사용합니다.</strong>
-                <p>가짜 분석값이나 미리 정해둔 답을 표시하지 않습니다.</p>
+                <span>{ko ? "내 상태 기록" : "MY CONTEXT"}</span>
+                <strong>{ko ? <>입력한 정보를<br/>다음 판단에 함께 사용합니다.</> : <>Your notes will be used<br/>in future decisions.</>}</strong>
+                <p>{ko ? "저장 단계에서는 가짜 AI 분석값을 만들지 않습니다." : "Saving does not invent an AI analysis or pre-filled conclusions."}</p>
               </div>
             ) : (
               <>
@@ -443,51 +450,55 @@ export function UserModelClient() {
         <>
           <section className={styles.surveyCard}>
             <div className={styles.surveyTop}>
-              <span>{String(step + 1).padStart(2, "0")} / {String(steps.length).padStart(2, "0")} · {current.title}</span>
-              <strong>{surveyPercent}% · {answeredCount}/{totalQuestions}문항</strong>
+              <span>{String(step + 1).padStart(2, "0")} / {String(steps.length).padStart(2, "0")} · {currentCopy.title}</span>
+              <strong>{surveyPercent}% · {answeredCount}/{totalQuestions} {ko ? "문항" : "answered"}</strong>
             </div>
             <div className={styles.surveyProgress}><span style={{ width: `${Math.round(((step + 1) / steps.length) * 100)}%` }}/></div>
-            <h2>{current.title}</h2><p>{current.description}</p>
+            <h2>{currentCopy.title}</h2><p>{currentCopy.description}</p><p style={{marginTop:8,fontSize:11}}>{ko ? "모든 문항은 선택사항입니다. 원하는 만큼 답하고 언제든 이어서 할 수 있습니다." : "Every question is optional. Answer what matters and continue later anytime."}</p>
 
             <div className={styles.questionList}>
-              {current.questions.map((question) => (
+              {current.questions.map((question) => {
+                const copy = getQuestionCopy(question, language);
+                const scaleAnswered = typeof answers[question.id] === "number";
+                return (
                 <div className={styles.question} key={question.id}>
                   <div className={helpStyles.questionHead}>
                     <div className={helpStyles.questionLabel}>
-                      <strong>{question.label}</strong>
-                      {question.multiple ? <span className={helpStyles.multiBadge}>복수 선택 가능</span> : null}
+                      <strong>{copy.label}</strong>
+                      {question.multiple ? <span className={helpStyles.multiBadge}>{ko ? "복수 선택 가능" : "Multiple choices"}</span> : null}
                     </div>
-                    <QuestionHelp text={question.help}/>
+                    <QuestionHelp text={copy.help}/>
                   </div>
                   {question.kind === "choice" ? (
                     <div className={styles.choiceGrid}>
                       {(question.options ?? []).map((option) => {
                         const answer = answers[question.id];
                         const selected = Array.isArray(answer) ? answer.includes(option) : answer === option;
-                        return (
-                          <button type="button" key={option} aria-pressed={selected} data-selected={selected} onClick={() => setAnswer(question, option)}>{option}</button>
-                        );
+                        return <button type="button" key={option} aria-pressed={selected} data-selected={selected} onClick={() => setAnswer(question, option)}>{getOptionLabel(question, option, language)}</button>;
                       })}
                     </div>
                   ) : (
-                    <div className={styles.scaleRow}>
-                      <span>{question.left}</span>
-                      <input type="range" min="0" max="100" value={typeof answers[question.id] === "number" ? Number(answers[question.id]) : 50} onChange={(event) => setAnswer(question, Number(event.target.value))}/>
-                      <span>{question.right}</span>
-                    </div>
+                    <>
+                      <div className={styles.scaleRow} data-unanswered={!scaleAnswered}>
+                        <span>{copy.left}</span>
+                        <input aria-label={copy.label} type="range" min="0" max="100" value={scaleAnswered ? Number(answers[question.id]) : 50} onChange={(event) => setAnswer(question, Number(event.target.value))}/>
+                        <span>{copy.right}</span>
+                      </div>
+                      {!scaleAnswered ? <small className={helpStyles.unansweredScale}>{ko ? "미응답 · 슬라이더를 움직이면 답변으로 저장됩니다." : "Not answered · move the slider to save an answer."}</small> : null}
+                    </>
                   )}
                 </div>
-              ))}
+              );})}
             </div>
 
             <div className={helpStyles.surveyNavWrap}>
               <div className={helpStyles.saveMeta} data-state={saveState === "saved" ? "saved" : saveState === "draft" || saveState === "saving" ? "draft" : "idle"}>
                 <span className={helpStyles.saveDot}/>
-                <span>{saveState === "saving" ? "계정에 저장 중" : saveState === "saved" ? (authState === "authenticated" ? "계정 저장 완료" : "브라우저 임시 저장 완료") : `답변 즉시 임시 저장 · ${answeredCount}/${totalQuestions}`}</span>
+                <span>{saveState === "saving" ? (ko ? "계정에 저장 중" : "Saving to account") : saveState === "saved" ? (authState === "authenticated" ? (ko ? "계정 저장 완료" : "Saved to account") : (ko ? "브라우저 임시 저장 완료" : "Saved in this browser")) : (ko ? `답변 즉시 임시 저장 · ${answeredCount}/${totalQuestions}` : `Autosaved · ${answeredCount}/${totalQuestions}`)}</span>
               </div>
               <div className={helpStyles.surveyButtons}>
-                <button disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}><ChevronLeft size={15}/> 이전</button>
-                <button onClick={goNext}>{step === steps.length - 1 ? (authState === "guest" ? "로그인하고 저장" : "프로필 저장") : "다음"} {step === steps.length - 1 && authState === "guest" ? <LogIn size={15}/> : <ChevronRight size={15}/>}</button>
+                <button disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}><ChevronLeft size={15}/> {ko ? "이전" : "Back"}</button>
+                <button onClick={goNext}>{step === steps.length - 1 ? (authState === "guest" ? (ko ? "로그인하고 저장" : "Sign in & save") : (ko ? "프로필 저장" : "Save profile")) : (ko ? "다음" : "Next")} {step === steps.length - 1 && authState === "guest" ? <LogIn size={15}/> : <ChevronRight size={15}/>}</button>
               </div>
             </div>
           </section>
@@ -497,9 +508,9 @@ export function UserModelClient() {
               {traits.map(([label, value]) => <div className={styles.trait} key={label}><span>{label}</span><strong>{value === null ? "—" : Math.round(value)}</strong><div className={styles.traitBar}><i style={{ width: `${value ?? 0}%` }}/></div></div>)}
             </div>
             <div className={styles.resultCopy}>
-              <h3>점수로 사람을 단정하지 않습니다.</h3>
-              <p>예산 상한, 호환성, 실제 용도, 사용 환경 같은 강한 조건을 먼저 적용하고 성향 점수는 후보 우선순위와 설명 방식에만 사용합니다. 선택하지 않은 문항은 임의의 기본값으로 판단하지 않습니다.</p>
-              <div style={{ marginTop: 12 }}><strong>전체 USER MODEL 완성도 {overallCompletion}%</strong></div>
+              <h3>{ko ? "점수로 사람을 단정하지 않습니다." : "You are not reduced to a score."}</h3>
+              <p>{ko ? "예산 상한, 호환성, 실제 용도, 사용 환경 같은 강한 조건을 먼저 적용하고 성향 점수는 후보 우선순위와 설명 방식에만 사용합니다. 선택하지 않은 문항은 임의의 기본값으로 판단하지 않습니다." : "Hard constraints such as budget, compatibility, real use and environment come first. Preference scores only tune ranking and explanation. Unanswered questions are never treated as default answers."}</p>
+              <div style={{ marginTop: 12 }}><strong>{ko ? "전체 USER MODEL 완성도" : "USER MODEL completion"} {overallCompletion}%</strong></div>
             </div>
           </section>
         </>

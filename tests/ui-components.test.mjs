@@ -108,3 +108,12 @@ test("supports multi-select profile answers and multiple category deep surveys",
   assert.ok(stepIds.includes("category-laptop"));
   assert.ok(stepIds.includes("category-tool"));
 });
+
+
+test("every profile survey question has complete English copy", async () => {
+  const { GENERAL_SURVEY, CATEGORY_SURVEYS } = await vite.ssrLoadModule("/lib/user-model-survey.ts");
+  const { hasCompleteEnglishSurveyCopy } = await vite.ssrLoadModule("/lib/user-model-locale.ts");
+  const questions = [...GENERAL_SURVEY, ...Object.values(CATEGORY_SURVEYS)].flatMap((step) => step.questions);
+  assert.ok(questions.length >= 50);
+  for (const question of questions) assert.equal(hasCompleteEnglishSurveyCopy(question), true, question.id);
+});

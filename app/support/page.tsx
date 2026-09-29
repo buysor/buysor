@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Bot, Mail, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
+import { usePreferences } from "@/components/preferences-provider";
 import styles from "./support.module.css";
 
 type ChatMessage = {
@@ -31,11 +32,13 @@ const initialSuggestions = [
 ];
 
 export default function SupportPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const { language } = usePreferences();
+  const ko = language === "ko";
+  const [messages, setMessages] = useState<ChatMessage[]>(ko ? initialMessages : [{role:"assistant",content:"Hello. BUYSOR Support can help with credits, sign-in, Lens, purchase-decision usage and error reports."}]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [handoffSuggested, setHandoffSuggested] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>(initialSuggestions);
+  const [suggestions, setSuggestions] = useState<string[]>(ko ? initialSuggestions : ["When are credits charged?","How do I use Lens?","I keep getting signed out"]);
 
   const history = useMemo(() => messages.slice(-8), [messages]);
 
@@ -55,12 +58,13 @@ export default function SupportPage() {
         body: JSON.stringify({
           message,
           history: history.slice(0, -1),
+          language,
         }),
       });
       const body = await response.json() as ApiReply;
       const reply = response.ok && body.reply
         ? body.reply
-        : body.error || "상담봇 응답을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        : body.error || (ko ? "상담봇 응답을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." : "Could not load a support reply. Please try again shortly.");
 
       setMessages((current) => [...current, { role: "assistant", content: reply }]);
       setHandoffSuggested(Boolean(body.handoffSuggested) || !response.ok);
@@ -72,7 +76,7 @@ export default function SupportPage() {
         ...current,
         {
           role: "assistant",
-          content: "네트워크 오류로 상담봇에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+          content: ko ? "네트워크 오류로 상담봇에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요." : "Could not connect to support due to a network error. Please try again.",
         },
       ]);
       setHandoffSuggested(true);
@@ -100,7 +104,7 @@ export default function SupportPage() {
 
         <section className={styles.grid}>
           <aside className={styles.sidebar}>
-            <h2>상담 항목</h2>
+            <h2>{ko?"상담 항목":"Help topics"}</h2>
             <button type="button" onClick={() => sendMessage("구매 판단 이용법을 알려줘")}>구매 판단 이용법 <span>판단 결과와 기능 사용</span></button>
             <button type="button" onClick={() => sendMessage("크레딧과 멤버십 차이를 알려줘")}>결제·크레딧 <span>멤버십, 충전, 사용 내역</span></button>
             <button type="button" onClick={() => sendMessage("로그인 문제가 있어")}>계정·로그인 <span>로그인과 프로필 문제</span></button>
@@ -112,9 +116,9 @@ export default function SupportPage() {
             <div className={styles.chatHeader}>
               <div>
                 <Bot size={19} />
-                <div><strong>바이저 상담봇</strong><span>서비스 이용 질문 전용</span></div>
+                <div><strong>{ko?"바이저 상담봇":"BUYSOR Support"}</strong><span>{ko?"서비스 이용 질문 전용":"Service-usage help"}</span></div>
               </div>
-              <span className={styles.aiBadge}>도움말 상담</span>
+              <span className={styles.aiBadge}>{ko?"도움말 상담":"HELP GUIDE"}</span>
             </div>
 
             <div className={styles.messages} aria-live="polite">
@@ -127,7 +131,7 @@ export default function SupportPage() {
               {loading ? (
                 <div className={styles.assistantRow}>
                   <div className={styles.avatar}><Bot size={16} /></div>
-                  <div className={styles.loadingBubble}>답변을 확인하고 있습니다…</div>
+                  <div className={styles.loadingBubble}>{ko?"답변을 확인하고 있습니다…":"Checking the answer…"}</div>
                 </div>
               ) : null}
             </div>
@@ -149,22 +153,22 @@ export default function SupportPage() {
                     void sendMessage();
                   }
                 }}
-                placeholder="궁금한 내용을 입력하세요"
-                aria-label="고객지원 질문"
+                placeholder={ko?"궁금한 내용을 입력하세요":"Type your question"}
+                aria-label={ko?"고객지원 질문":"Support question"}
               />
-              <button type="button" onClick={() => sendMessage()} disabled={loading || !input.trim()} aria-label="보내기"><Send size={18} /></button>
+              <button type="button" onClick={() => sendMessage()} disabled={loading || !input.trim()} aria-label={ko?"보내기":"Send"}><Send size={18} /></button>
             </div>
 
-            <div className={styles.privacy}>계정 비밀번호, 인증번호, API 키, 카드번호 전체를 입력하지 마세요.</div>
+            <div className={styles.privacy}>{ko?"계정 비밀번호, 인증번호, API 키, 카드번호 전체를 입력하지 마세요.":"Do not enter account passwords, verification codes, API keys or full card numbers."}</div>
           </section>
 
           <aside className={styles.contactCard}>
             <Mail size={20} />
             <h2>직접 문의하기</h2>
             <p>결제 분쟁, 중복 차감, 반복 로그인 실패처럼 계정 확인이 필요한 문제는 직접 문의로 넘깁니다.</p>
-            <a href="mailto:peon9339@gmail.com?subject=BUYSOR%20고객지원%20문의">이메일로 직접 문의</a>
-            <small>현재는 이메일 클라이언트를 여는 임시 연결입니다. 서버 전송형 문의 시스템은 별도 연결이 필요합니다.</small>
-            {handoffSuggested ? <div className={styles.handoff}>이 문의는 직접 확인이 필요한 가능성이 높습니다.</div> : null}
+            <a href="mailto:peon9339@gmail.com?subject=BUYSOR%20고객지원%20문의">{ko?"이메일로 직접 문의":"Contact by email"}</a>
+            <small>{ko?"현재는 이메일 클라이언트를 여는 임시 연결입니다. 서버 전송형 문의 시스템은 별도 연결이 필요합니다.":"This currently opens your email client. A server-side support form is not connected yet."}</small>
+            {handoffSuggested ? <div className={styles.handoff}>{ko?"이 문의는 직접 확인이 필요한 가능성이 높습니다.":"This issue likely needs direct review."}</div> : null}
           </aside>
         </section>
       </main>

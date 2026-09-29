@@ -33,12 +33,13 @@ export function CommerceNotice(){const {language}=usePreferences();const ko=lang
  {data?.authenticated&&data.balance?<strong>{ko?'사용 가능':'Available'} {data.balance.available}C</strong>:null}
  </aside>;}
 export function BillingReturn({failed=false}:{failed?:boolean}){
- const [state,setState]=useState(failed?'결제를 완료하지 않았습니다.':'결제 상태를 서버에서 확인합니다.');const [retry,setRetry]=useState(0);const [canRetry,setCanRetry]=useState(false);
+ const {language}=usePreferences();const ko=language==='ko';
+ const [state,setState]=useState(failed?(ko?'결제를 완료하지 않았습니다.':'Payment was not completed.'):(ko?'결제 상태를 서버에서 확인합니다.':'Checking payment status with the server.'));const [retry,setRetry]=useState(0);const [canRetry,setCanRetry]=useState(false);
  useEffect(()=>{if(failed)return;const p=new URLSearchParams(location.search);const orderId=p.get('orderId'),paymentKey=p.get('paymentKey'),amount=Number(p.get('amount'));
- if(!orderId||!paymentKey||!Number.isSafeInteger(amount)||amount<=0){setState('주문 정보가 없습니다. 결제 내역을 확인해 주세요.');return;}
+ if(!orderId||!paymentKey||!Number.isSafeInteger(amount)||amount<=0){setState(ko?'주문 정보가 없습니다. 결제 내역을 확인해 주세요.':'Order information is missing. Check billing history.');return;}
  let active=true;setCanRetry(false);
- fetch('/api/billing/confirm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orderId,paymentKey,amount})}).then(async r=>{const b=await r.json();if(!r.ok)throw Error(b.error||'결제 확인 실패');if(active){setState(`결제 확인 완료. ${b.credits}C가 지급되었습니다.`);history.replaceState(null,'',location.pathname);}}).catch(e=>{if(active){setState(e.message);setCanRetry(true);}});return()=>{active=false;};},[failed,retry]);
- return <section className={s.return}><h1>결제 확인</h1><p role="status">{state}</p>{canRetry?<button onClick={()=>setRetry(v=>v+1)}>같은 주문 다시 확인</button>:null}<a href="/credits">잔액과 내역 확인</a><a href="/support">고객지원</a></section>;
+ fetch('/api/billing/confirm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orderId,paymentKey,amount})}).then(async r=>{const b=await r.json();if(!r.ok)throw Error(b.error||(ko?'결제 확인 실패':'Payment verification failed'));if(active){setState(ko?`결제 확인 완료. ${b.credits}C가 지급되었습니다.`:`Payment verified. ${b.credits}C was added.`);history.replaceState(null,'',location.pathname);}}).catch(e=>{if(active){setState(e.message);setCanRetry(true);}});return()=>{active=false;};},[failed,retry]);
+ return <section className={s.return}><h1>{ko?'결제 확인':'Payment verification'}</h1><p role="status">{state}</p>{canRetry?<button onClick={()=>setRetry(v=>v+1)}>{ko?'같은 주문 다시 확인':'Retry same order'}</button>:null}<a href="/credits">{ko?'잔액과 내역 확인':'Check balance & history'}</a><a href="/support">{ko?'고객지원':'Support'}</a></section>;
 }
 type Order={id:string;product_id:string;amount:number;credits:number;status:string;created_at:number};
 export function BillingHistory(){

@@ -83,8 +83,9 @@ export function DecisionStudio({
     setPreview(null);
     setEncodedImage(null);
     if (!nextFile) return;
-    if (!/^image\/(jpeg|png|webp)$/.test(nextFile.type)) {
-      setInputError(ko ? "JPG, PNG, WEBP 이미지만 사용할 수 있습니다." : "Use a JPG, PNG, or WEBP image.");
+    const heic=/\.(heic|heif)$/i.test(nextFile.name)||/^image\/hei[cf]$/i.test(nextFile.type);
+    if (!heic && !/^image\/(jpeg|png|webp)$/.test(nextFile.type)) {
+      setInputError(ko ? "JPG, PNG, WEBP, HEIC/HEIF 이미지를 사용할 수 있습니다." : "Use a JPG, PNG, WEBP, HEIC, or HEIF image.");
       return;
     }
     if (nextFile.size > 15 * 1024 * 1024) {
@@ -94,12 +95,12 @@ export function DecisionStudio({
 
     setImageBusy(true);
     try {
-      const dataUrl = await prepareImage(nextFile);
+      const dataUrl = await prepareImage(nextFile, heic);
       setFile(nextFile);
       setEncodedImage(dataUrl);
       setPreview(dataUrl);
     } catch {
-      setInputError(ko ? "이미지를 준비하지 못했습니다. 다른 사진을 선택해 주세요." : "Could not prepare this image. Try another one.");
+      setInputError(ko ? (heic ? "이 브라우저에서 HEIC를 변환하지 못했습니다. 사진을 JPG로 공유한 뒤 다시 시도해 주세요." : "이미지를 준비하지 못했습니다. 다른 사진을 선택해 주세요.") : (heic ? "This browser could not convert the HEIC file. Export it as JPG and try again." : "Could not prepare this image. Try another one."));
     } finally {
       setImageBusy(false);
     }
@@ -233,7 +234,7 @@ export function DecisionStudio({
                     <span className="upload-icon"><ScanLine aria-hidden="true" size={30} /></span>
                     <strong>{ko ? "사진을 놓거나 눌러서 선택" : "Drop or choose a photo"}</strong>
                     <span>{ko ? "제품 사진, 쇼핑 캡처, 중고 매물 모두 가능" : "Product photos, store captures, and used listings"}</span>
-                    <small>JPG · PNG · WEBP · 15MB 이하</small>
+                    <small>JPG · PNG · WEBP · HEIC/HEIF · 15MB</small>
                   </>
                 )}
               </div>
@@ -305,8 +306,21 @@ function isHttpUrl(value: string) {
   }
 }
 
-async function prepareImage(file: File) {
+async function prepareImage(file: File, heic = false) {
   const original = await readAsDataUrl(file);
+  if (heic) {
+    const bitmap = await createImageBitmap(file);
+    const maxSide = 1600;
+    const ratio = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
+    canvas.height = Math.max(1, Math.round(bitmap.height * ratio));
+    const context = canvas.getContext("2d");
+    if (!context) { bitmap.close(); throw new Error("canvas unavailable"); }
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    return canvas.toDataURL("image/webp", 0.84);
+  }
   if (file.size <= 1_500_000) return original;
 
   const image = await loadImage(original);

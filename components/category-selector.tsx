@@ -90,7 +90,7 @@ export function CategorySelector({
     <>
       <button type="button" className={selectedCategory ? "category-field is-selected" : "category-field"} onClick={openSelector}>
         <span>
-          <small>{ko ? "제품 카테고리 · 선택사항" : "PRODUCT CATEGORY · OPTIONAL"}</small>
+          <small>{ko ? "제품 카테고리 · 필수" : "PRODUCT CATEGORY · REQUIRED"}</small>
           <strong>{label}</strong>
         </span>
         <ChevronRight size={18} />

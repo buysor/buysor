@@ -155,7 +155,8 @@ export async function listDecisionHistory(user: ChatGPTUser, limit = 20): Promis
   return (result.results ?? []).map(toHistoryItem);
 }
 
-export async function getReportData(user: ChatGPTUser, period: "weekly" | "monthly"): Promise<ReportData> {
+export async function getReportData(user: ChatGPTUser, period: "weekly" | "monthly", language: "ko" | "en" = "ko"): Promise<ReportData> {
+  const ko = language === "ko";
   const tier = await getSubscriptionTier(user);
   const days = period === "weekly" ? 7 : 30;
   const history = await listDecisionsSince(user, Date.now() - (days * DAY));
@@ -178,12 +179,12 @@ export async function getReportData(user: ChatGPTUser, period: "weekly" | "month
     .map(([label, count]) => ({ label: humanizeCategory(label), value: Math.round((count / maxCategory) * 100), note: String(count) }));
 
   const patterns: string[] = [];
-  if (counts.WAIT > counts.BUY && counts.WAIT > 0) patterns.push("즉시 구매보다 대기 판단이 더 많았습니다. 기다리는 이유가 반복되는지 확인할 가치가 있습니다.");
-  if (counts.BUY > counts.WAIT && counts.BUY > 0) patterns.push("구매 적기가 확인된 판단이 대기보다 많았습니다. 실제 구매 후 만족도 피드백이 다음 판단 정확도를 높입니다.");
-  if (counts.SKIP > 0) patterns.push(`${counts.SKIP}건은 지금 구매할 필요가 낮다고 판단해 불필요한 지출을 피했습니다.`);
+  if (counts.WAIT > counts.BUY && counts.WAIT > 0) patterns.push(ko ? "즉시 구매보다 대기 판단이 더 많았습니다. 기다리는 이유가 반복되는지 확인할 가치가 있습니다." : "WAIT decisions outnumbered BUY decisions. Check whether the same reasons for waiting are recurring.");
+  if (counts.BUY > counts.WAIT && counts.BUY > 0) patterns.push(ko ? "구매 적기가 확인된 판단이 대기보다 많았습니다. 실제 구매 후 만족도 피드백이 다음 판단 정확도를 높입니다." : "BUY decisions outnumbered WAIT decisions. Post-purchase satisfaction feedback can improve future decisions.");
+  if (counts.SKIP > 0) patterns.push(ko ? `${counts.SKIP}건은 지금 구매할 필요가 낮다고 판단해 불필요한 지출을 피했습니다.` : `${counts.SKIP} decision(s) were SKIP, avoiding purchases that were not justified right now.`);
   const uncertaintyCount = completed.reduce((sum, item) => sum + (item.result?.missingInformation.length ?? 0), 0);
-  if (uncertaintyCount > 0) patterns.push(`완료된 판단에서 확인되지 않은 정보가 ${uncertaintyCount}개 남았습니다. 최신 가격·재고·출시 정보는 다음 재판단 때 다시 확인해야 합니다.`);
-  if (!patterns.length) patterns.push("판단 기록이 쌓이면 BUY · WAIT · SKIP의 반복 패턴과 재확인 포인트를 자동으로 정리합니다.");
+  if (uncertaintyCount > 0) patterns.push(ko ? `완료된 판단에서 확인되지 않은 정보가 ${uncertaintyCount}개 남았습니다. 최신 가격·재고·출시 정보는 다음 재판단 때 다시 확인해야 합니다.` : `${uncertaintyCount} unverified item(s) remain across completed decisions. Recheck current price, stock and release information when revisiting them.`);
+  if (!patterns.length) patterns.push(ko ? "판단 기록이 쌓이면 BUY · WAIT · SKIP의 반복 패턴과 재확인 포인트를 자동으로 정리합니다." : "As history grows, BUYSOR will summarize recurring BUY · WAIT · SKIP patterns and recheck points.");
 
   const recheck = completed
     .filter((item) => item.verdict === "WAIT" && (item.result?.recheckAt || item.result?.waitFor))
@@ -191,7 +192,7 @@ export async function getReportData(user: ChatGPTUser, period: "weekly" | "month
     .map((item) => ({
       id: item.id,
       title: item.inputLabel,
-      note: item.result?.waitFor || item.result?.summary || "다시 확인할 조건이 있습니다.",
+      note: item.result?.waitFor || item.result?.summary || (ko ? "다시 확인할 조건이 있습니다." : "There is a condition to recheck."),
       verdict: item.verdict,
       recheckAt: item.result?.recheckAt ?? null,
     }));
@@ -215,7 +216,7 @@ export async function getReportData(user: ChatGPTUser, period: "weekly" | "month
       id: item.id,
       title: item.inputLabel,
       when: item.result?.recheckAt || "조건 충족 시",
-      action: item.result?.waitFor || "시장·가격·필요성 다시 확인",
+      action: item.result?.waitFor || (ko ? "시장·가격·필요성 다시 확인" : "Recheck market, price and need"),
     }));
 
   const riskFlags = uniqueStrings(completed.flatMap((item) => [
@@ -238,19 +239,19 @@ export async function getReportData(user: ChatGPTUser, period: "weekly" | "month
     locked: false,
     period,
     hasData: history.length > 0,
-    rangeLabel: period === "weekly" ? "최근 7일" : "최근 30일",
+    rangeLabel: ko ? (period === "weekly" ? "최근 7일" : "최근 30일") : (period === "weekly" ? "Last 7 days" : "Last 30 days"),
     metrics: period === "weekly"
       ? [
-          { label: "총 판단", value: String(history.length), note: "최근 7일" },
-          { label: "BUY", value: String(counts.BUY), note: "구매" },
-          { label: "WAIT", value: String(counts.WAIT), note: "대기" },
-          { label: "SKIP", value: String(counts.SKIP), note: "구매 안 함" },
+          { label: ko ? "총 판단" : "Total decisions", value: String(history.length), note: ko ? "최근 7일" : "Last 7 days" },
+          { label: "BUY", value: String(counts.BUY), note: ko ? "구매" : "Buy" },
+          { label: "WAIT", value: String(counts.WAIT), note: ko ? "대기" : "Wait" },
+          { label: "SKIP", value: String(counts.SKIP), note: ko ? "구매 안 함" : "Skip" },
         ]
       : [
-          { label: "총 판단", value: String(history.length), note: "최근 30일" },
-          { label: "완료 판단", value: String(completed.length), note: "AI 판단 완료" },
-          { label: "WAIT", value: String(counts.WAIT), note: "재확인 후보" },
-          { label: "SKIP", value: String(counts.SKIP), note: "불필요 지출 방지" },
+          { label: ko ? "총 판단" : "Total decisions", value: String(history.length), note: ko ? "최근 30일" : "Last 30 days" },
+          { label: ko ? "완료 판단" : "Completed", value: String(completed.length), note: ko ? "AI 판단 완료" : "AI decisions" },
+          { label: "WAIT", value: String(counts.WAIT), note: ko ? "재확인 후보" : "Recheck candidates" },
+          { label: "SKIP", value: String(counts.SKIP), note: ko ? "불필요 지출 방지" : "Avoided purchases" },
         ],
     categoryBars,
     patterns,

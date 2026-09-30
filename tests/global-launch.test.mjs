@@ -97,3 +97,10 @@ test('local check-ins work even when a legacy date key is occupied, without rewa
  const data=await attendance.checkIn(user,'America/Los_Angeles');assert.equal(data.checkedToday,true);assert.equal(data.timeZone,'America/Los_Angeles');assert.equal(data.creditedReward,0);
  await attendance.checkIn(user,'America/Los_Angeles');assert.equal(db.prepare('SELECT COUNT(*) n FROM attendance_visits').get().n,1);assert.equal(db.prepare('SELECT COUNT(*) n FROM attendance').get().n,1);
 });
+
+test('verified rejected refund restores credits; external pending refunds lock them',async()=>{
+ const {api,transaction,db,store,respond}=await fixture();globalThis.fetch=async()=>respond(transaction);await api.confirmGlobalOrder('owner',id,txn);
+ const adjustment={id:'adj_mock',transaction_id:txn,action:'refund',type:'full',status:'pending_approval',currency_code:'USD',totals:{total:'219'}};
+ globalThis.fetch=async()=>respond({...transaction,adjustments:[adjustment]});await api.reconcileGlobalPayment(txn);assert.equal(db.prepare('SELECT status FROM billing_orders').get().status,'refund_pending');assert.equal((await store.wallet('owner')).available,0);
+ db.prepare('UPDATE billing_market SET refund_requested=1').run();globalThis.fetch=async()=>respond({...transaction,adjustments:[{...adjustment,status:'rejected'}]});await api.reconcileGlobalPayment(txn);assert.equal((await store.wallet('owner')).available,20);assert.equal(db.prepare('SELECT COUNT(*) n FROM credit_lots').get().n,1);
+});

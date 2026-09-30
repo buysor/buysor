@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { SiteShell } from '@/components/site-shell';
 import { usePreferences } from '@/components/preferences-provider';
 import { CommerceNotice } from '@/components/commerce-client';
-import { USD_MEMBERSHIP as USD_MEMBERSHIP as MEMBERSHIP, FEATURES, formatUSD } from '@/lib/commerce-policy';
+import { USD_MEMBERSHIP as MEMBERSHIP, FEATURES, formatUSD } from '@/lib/commerce-policy';
 import s from './pricing.module.css';
 export default function PricingPage(){const {language}=usePreferences();const ko=language==='ko';return <SiteShell compact><main className={s.page}>
  <header className={s.hero}><span>{ko?'월 멤버십':'MONTHLY MEMBERSHIP'}</span><h1>{ko?<>플랜은 하나.<br/>선택은 더 명확하게.</>:<>One plan.<br/>Clearer decisions.</>}</h1><p>{ko?'여러 구매를 고민할 때만 선택하세요. 가끔 쓴다면 단품 충전이 더 맞습니다.':'Choose membership only if you make several purchase decisions. If you use BUYSOR occasionally, credit packs are usually better.'}</p></header>

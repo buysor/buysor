@@ -97,6 +97,9 @@ async function applyAdjustments(order: Order, transaction: Transaction) {
     try { await db.batch([db.prepare("UPDATE billing_orders SET status='refund_pending' WHERE id=? AND status='paid'").bind(order.id),db.prepare("UPDATE billing_orders SET status='refunded' WHERE id=? AND status='refund_pending'").bind(order.id)]); return true; } catch { /* A concurrent spend is reviewed and frozen below. */ }
   }
   if (order.status === 'refunded') return true;
+  if (order.status==='paid' && relevant.every(a=>a.action==='refund' && a.type==='full' && a.status==='pending_approval')) {
+    try { await db.prepare("UPDATE billing_orders SET status='refund_pending' WHERE id=? AND status='paid'").bind(order.id).run();return true; } catch { /* Used credits need support review. */ }
+  }
   if (order.status === 'refund_pending' && relevant.every(a => a.action === 'refund' && a.type === 'full' && a.status === 'pending_approval')) return true;
   await db.batch([db.prepare('UPDATE credit_lots SET frozen=1 WHERE source_key=?').bind(`order:${order.id}`),db.prepare("UPDATE billing_orders SET status='review' WHERE id=? AND status!='refunded'").bind(order.id)]);
   return true;
@@ -107,7 +110,7 @@ export async function refundGlobalOrder(userId: string,id: string) {
   if (!order.transaction_id || !['paid','refund_pending'].includes(order.status)) throw new PublicError(409,'REFUND_REVIEW','Support needs to review this order.');
   if (order.status === 'paid') { try { await db.prepare("UPDATE billing_orders SET status='refund_pending' WHERE id=? AND status='paid'").bind(id).run(); } catch { throw new PublicError(409,'REFUND_REVIEW','Used credits require support review.'); } }
   const transaction = await paddle<Transaction>(`/transactions/${order.transaction_id}?include=adjustments`); verifyGlobalPayment(transaction,order,true);
-  if (await applyAdjustments({...order,status:'refund_pending'},transaction)) { const current = await readOrder(id,userId); if (current.status === 'refunded') return {status:'refunded'}; throw new PublicError(409,'REFUND_PENDING','Refund verification is pending. Credits remain locked until confirmed.'); }
+  if (await applyAdjustments({...order,status:'refund_pending'},transaction)) { const current = await readOrder(id,userId); if (current.status === 'refunded') return {status:'refunded'}; if(current.status==='paid')throw new PublicError(409,'REFUND_REJECTED','The refund request was declined. Credits are available again; contact support.'); throw new PublicError(409,'REFUND_PENDING','Refund verification is pending. Credits remain locked until confirmed.'); }
   const lock = await db.prepare('UPDATE billing_market SET refund_requested=1 WHERE order_id=? AND refund_requested=0').bind(id).run();
   if (Number(lock.meta.changes) === 1) await paddle<Adjustment>('/adjustments','POST',{action:'refund',type:'full',transaction_id:order.transaction_id,reason:'Customer requested a full refund of unused BUYSOR credits'});
   // Approval is asynchronous. Never unfreeze on a timeout or resend an uncertain refund.

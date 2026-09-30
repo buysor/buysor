@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AuthControl } from "@/components/auth-control";
 import { usePreferences } from "@/components/preferences-provider";
+import { MarketSelector } from "@/components/market-selector";
 import styles from "./site-shell.module.css";
 
 type SiteShellProps = {
@@ -103,12 +104,13 @@ export function SiteShell({ children, compact = false }: SiteShellProps) {
 
                 <div className={styles.menuGroup}>
                   <span>{ko ? "도구" : "Tools"}</span>
-                  <Link href="/attendance" role="menuitem" onClick={() => setMenuOpen(false)}><Flame size={17} /><div><strong>{ko ? "출석 기록" : "Attendance"}</strong><small>{ko ? "방문 기록 · 자동 보상 없음" : "Visit history, no automatic rewards"}</small></div></Link>
+                  <Link href="/attendance" role="menuitem" onClick={() => setMenuOpen(false)}><Flame size={17} /><div><strong>{ko ? "출석 기록" : "Daily check-in"}</strong><small>{ko ? "방문 기록 · 자동 보상 없음" : "Visit history, no automatic rewards"}</small></div></Link>
                   <Link href="/guide" role="menuitem" onClick={() => setMenuOpen(false)}><BookOpenText size={17} /><div><strong>{ko ? "설명서" : "Guide"}</strong><small>{ko ? "BUYSOR 사용 방법" : "How to use BUYSOR"}</small></div></Link>
                   <Link href="/support" role="menuitem" onClick={() => setMenuOpen(false)}><Headphones size={17} /><div><strong>{ko ? "고객지원" : "Support"}</strong><small>{ko ? "상담봇 · 계정 · 오류 문의" : "Chat · account · errors"}</small></div></Link>
                 </div>
 
                 <div className={styles.menuSettings}>
+                  <div style={{gridColumn:'1 / -1'}}><MarketSelector compact /></div>
                   <button type="button" onClick={() => setLanguage(ko ? "en" : "ko")}><Languages size={16} /> {ko ? "English" : "Korean"}</button>
                   <button type="button" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
                     {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}

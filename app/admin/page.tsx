@@ -6,10 +6,11 @@ import { SiteShell } from "@/components/site-shell";
 import { AdminDashboardClient } from "@/components/admin-dashboard-client";
 
 export const dynamic="force-dynamic";
-export const metadata:Metadata={title:"운영 대시보드"};
+export const metadata:Metadata={title:"Operations dashboard"};
 
 export default async function AdminPage(){
   const user=await requireChatGPTUser("/admin");
   if(!isAdminEmail(user.email)) notFound();
   return <SiteShell compact><AdminDashboardClient/></SiteShell>;
 }
+

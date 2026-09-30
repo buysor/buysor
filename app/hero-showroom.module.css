@@ -27,6 +27,9 @@
   aspect-ratio: 3 / 2;
   line-height: 0;
 }
+.frame.frame .darkArt { display: none; }
+:global(html[data-theme="dark"]) .frame.frame picture { display: none; }
+:global(html[data-theme="dark"]) .frame.frame .darkArt { display: block; }
 
 .frame.frame img {
   display: block;

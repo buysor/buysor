@@ -6,11 +6,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "BUYSOR — 구매 고민을 끝내는 AI",
+    default: "BUYSOR — Decide what is worth buying",
     template: "%s | BUYSOR",
   },
   description:
-    "사진, 링크, 제품명과 나의 조건을 바탕으로 지금 살지 기다릴지 결정합니다.",
+    "A personal AI buying advisor for electronics, appliances and power tools. Decide whether to buy, wait or skip with your budget and situation in mind.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
@@ -23,7 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="en" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('buysor-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light';document.documentElement.style.colorScheme=t==='dark'?'dark':'light';var l=localStorage.getItem('buysor-language');document.documentElement.lang=l==='ko'?'ko':'en'}catch(e){}` }} /></head>
       <body className="antialiased">
         <PreferencesProvider>
           <AnalyticsTracker />

@@ -6,6 +6,16 @@ export const CREDIT_PACKS = [
   { id: 'pack300', name: '대용량 팩', price: 24900, credits: 300 },
 ] as const;
 export const MEMBERSHIP = { id: 'member140', name: 'BUYSOR 멤버십', price: 9900, credits: 140, validityDays: 90 } as const;
+/** New global quotes are USD cents. Legacy KRW quotes and wallet policy remain immutable. */
+export const BILLING_POLICY_VERSION = '2026-09-30-global-v1';
+export const USD_CREDIT_PACKS = [
+  { id: 'pack20', name: 'Starter', ko: '스타터', price: 199, credits: 20 },
+  { id: 'pack100', name: 'Standard', ko: '스탠다드', price: 799, credits: 100 },
+  { id: 'pack300', name: 'Value', ko: '밸류', price: 1999, credits: 300 },
+] as const;
+export const USD_MEMBERSHIP = { ...MEMBERSHIP, name: 'BUYSOR Membership', ko: 'BUYSOR 멤버십', price: 999 } as const;
+export const formatUSD = (cents: number, language: 'ko' | 'en' = 'en') => new Intl.NumberFormat(language === 'ko' ? 'ko-KR' : 'en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+export function usdProductById(id: string) { return USD_CREDIT_PACKS.find(p => p.id === id); }
 export const FEATURES = {
   lens: { credits: 1, maxOutput: 700, ceilingKRW: 24 },
   standard: { credits: 10, maxOutput: 2800, ceilingKRW: 240 },

@@ -3,7 +3,7 @@ import { ReportClient } from "@/components/report-client";
 import { SiteShell } from "@/components/site-shell";
 
 export const metadata: Metadata = {
-  title: "주간 리포트",
+  title: "Weekly report",
 };
 
 export default function WeeklyReportPage() {
@@ -15,3 +15,4 @@ export default function WeeklyReportPage() {
     </SiteShell>
   );
 }
+

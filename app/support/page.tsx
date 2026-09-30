@@ -101,11 +101,12 @@ export default function SupportPage() {
 
           <div className={styles.trustRow}>
             <span><Sparkles size={16} /> {ko ? "빠른 해결" : "Quick help"}</span>
-            <span><Bot size={16} /> {ko ? "24시간 상담" : "24-hour support"}</span>
+            <span><Bot size={16} /> {ko ? "언제든 이용할 수 있는 도움말" : "Self-service help, anytime"}</span>
             <span><ShieldCheck size={16} /> {ko ? "비밀정보 비노출" : "Keep private information safe"}</span>
           </div>
         </section>
 
+        <p style={{color:"var(--muted)",fontSize:13}}>{ko?"BUYSOR 요금은 USD 기준이며 세금과 최종 금액은 결제창에서 확인합니다. 제품 예산은 선택한 구매 지역의 통화를 사용합니다.":"BUYSOR prices are in USD. Review applicable tax and the final total at checkout. Product budgets use the currency of your selected shopping region."}</p>
         <section className={styles.grid}>
           <aside className={styles.sidebar}>
             <h2>{ko?"상담 항목":"Help topics"}</h2>
@@ -171,7 +172,7 @@ export default function SupportPage() {
             <h2>{ko ? "직접 문의하기" : "Contact us directly"}</h2>
             <p>{ko ? "결제 분쟁, 중복 차감, 반복 로그인 실패처럼 계정 확인이 필요한 문제는 직접 문의로 넘깁니다." : "Contact us directly for payment disputes, duplicate charges or repeated sign-in failures that need account review."}</p>
             <a href={ko ? "mailto:peon9339@gmail.com?subject=BUYSOR%20고객지원%20문의" : "mailto:peon9339@gmail.com?subject=BUYSOR%20Support%20Request"}>{ko?"이메일로 직접 문의":"Contact by email"}</a>
-            <small>{ko?"현재는 이메일 클라이언트를 여는 임시 연결입니다. 서버 전송형 문의 시스템은 별도 연결이 필요합니다.":"This currently opens your email client. A server-side support form is not connected yet."}</small>
+            <small>{ko?"영어 또는 한국어로 문의하세요. 주문 번호, 시간대, 오류 설명을 알려주시면 확인에 도움이 됩니다.":"Write in English or Korean. Include your order ID, time zone and a short description of what happened."}</small>
             {handoffSuggested ? <div className={styles.handoff}>{ko?"이 문의는 직접 확인이 필요한 가능성이 높습니다.":"This issue likely needs direct review."}</div> : null}
           </aside>
         </section>
@@ -179,3 +180,4 @@ export default function SupportPage() {
     </SiteShell>
   );
 }
+

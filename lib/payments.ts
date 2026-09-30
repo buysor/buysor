@@ -1,6 +1,6 @@
 import { commerceDb } from './commerce-store';
 import { POLICY_VERSION, productById } from './commerce-policy';
-import { requireCheckout } from './commerce-runtime';
+import { requireLegacyCheckout as requireCheckout } from './commerce-runtime';
 import { PublicError } from './request-safety';
 type Order={id:string;user_id:string;product_id:string;amount:number;credits:number;status:string;payment_key:string|null;created_at:number};
 type Payment={orderId:string;paymentKey:string;mId:string;currency:string;totalAmount:number;balanceAmount:number;status:string;approvedAt:string|null;checkout?:{url:string}};
@@ -99,3 +99,4 @@ export async function reconcilePayment(id:string) {
  }
  return {status:order.status};
 }
+

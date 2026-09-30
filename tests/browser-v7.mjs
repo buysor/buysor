@@ -7,11 +7,12 @@ await mkdir(evidence,{recursive:true});
 for(let i=0;i<90;i++){try{if((await fetch(origin)).ok)break;}catch{}if(i===89)throw Error('Server not ready');await new Promise(r=>setTimeout(r,1000));}
 const browser=await chromium.launch();const results=[];
 async function waitForPreferences(page,language='ko',theme='light'){
- await page.waitForFunction(expected=>document.documentElement.lang===expected.language&&document.documentElement.dataset.theme===expected.theme,{language,theme},{timeout:90000});
+ await page.waitForFunction(expected=>document.documentElement.dataset.preferencesReady==='true'&&document.documentElement.lang===expected.language&&document.documentElement.dataset.theme===expected.theme,{language,theme},{timeout:90000});
 }
 try{
  for(const width of [1440,768,390]){
   const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1});
+  await context.addInitScript(()=>localStorage.setItem('buysor-language','ko'));
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('Browser error:',e.message);});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('#decision-example').waitFor();await page.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0));
   await waitForPreferences(page);
@@ -21,14 +22,14 @@ try{
   await page.locator('button[aria-haspopup="menu"]').click();
   await page.locator('[role="menu"] a[href="/credits"]').click();await page.waitForURL('**/credits');await page.waitForLoadState('domcontentloaded');
   await page.getByRole('button',{name:'결제 준비 중',exact:true}).first().waitFor({timeout:20000});
-  assert.ok((await page.locator('main').innerText()).includes('1,900'));assert.equal(await page.locator('main button:disabled').count(),3);
+  assert.ok((await page.locator('main').innerText()).includes('1.99'));assert.equal(await page.locator('main button:disabled').count(),3);
   await page.screenshot({path:`${evidence}/credits-${width}.png`,fullPage:true});
   await page.goto(origin+'/pricing',{waitUntil:'domcontentloaded'});
   await waitForPreferences(page);
   await page.getByRole('status').filter({hasText:'공개 준비 버전'}).waitFor({timeout:20000});
   assert.equal(await page.locator('main button:disabled').count(),1);assert.equal(await page.locator('main [class*="planCard"]').count(),1);
   await page.screenshot({path:`${evidence}/membership-${width}.png`,fullPage:true});
-  if(width===1440){await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForPreferences(page);await page.evaluate(()=>localStorage.setItem('buysor-theme','dark'));await page.reload({waitUntil:'domcontentloaded'});await waitForPreferences(page,'ko','dark');await page.screenshot({path:`${evidence}/home-dark.png`,fullPage:true});}
+  {await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForPreferences(page);await page.evaluate(()=>localStorage.setItem('buysor-theme','dark'));await page.reload({waitUntil:'domcontentloaded'});await waitForPreferences(page,'ko','dark');const dark=await page.evaluate(()=>{const hero=document.querySelector('main section');const frame=document.querySelector('[class*=frame]');const visible=[...frame.querySelectorAll('picture')].filter(p=>getComputedStyle(p).display!=='none');return {background:getComputedStyle(hero).backgroundColor,pictures:visible.map(p=>p.querySelector('img').currentSrc)};});assert.match(dark.background,/rgb\((?:[0-3]?\d),/);assert.equal(dark.pictures.length,1);assert.match(dark.pictures[0],/buysor-studio-dark-20260930/);await page.screenshot({path:`${evidence}/home-dark-${width}.png`,fullPage:true});}
   assert.deepEqual(errors,[]);results.push({width,layout,status:'passed'});await context.close();
  }
  const response=await fetch(origin+'/api/commerce/status');assert.equal(response.status,200);const status=await response.json();
@@ -44,7 +45,6 @@ try{
   const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1});
   const originalProfile={stateText:'기존에 작성한 내 정보',structuredState:null,survey:{activity:['학생'],mobility:25,category:['노트북','스마트폰','자동차','전동공구']},categoryProfiles:{},completion:25};
   await context.addInitScript(profile=>{
-   if(!localStorage.getItem('buysor-language'))localStorage.setItem('buysor-language','en');
    if(!localStorage.getItem('buysor-user-model'))localStorage.setItem('buysor-user-model',JSON.stringify(profile));
    sessionStorage.setItem('buysor-draft',JSON.stringify({type:'name',value:'Laptop',categoryId:'laptop',subcategoryId:null}));
   },originalProfile);
@@ -54,13 +54,13 @@ try{
    if(path==='/api/auth/me')body={authenticated:false};
    else if(path==='/api/commerce/status')body={authenticated:false,checkoutReady:false,subscriptionReady:false,aiReady:false,balance:null};
    else if(path==='/api/ai/status')body={configured:false,provider:null,model:null};
-   else if(path==='/api/billing/history')body={items:['pending','paid','refund_pending','refunded','review'].map((state,index)=>({id:`fixture-${index}`,product_id:'pack20',amount:1900,credits:20,status:state,created_at:0}))};
+   else if(path==='/api/billing/history')body={items:['pending','paid','refund_pending','refunded','review'].map((state,index)=>({id:`fixture-${index}`,product_id:'pack20',amount:index===1?219:1900,currency:index===1?'USD':'KRW',credits:20,status:state,created_at:0}))};
    else if(path==='/api/attendance'){status=401;body={error:'로그인이 필요합니다.'};}
    await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
   });
   const page=await context.newPage();const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
   async function checkEnglish(label){
-   await page.waitForFunction(()=>document.documentElement.lang==='en');
+   await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.documentElement.dataset.preferencesReady==='true');
    assert.doesNotMatch((await page.locator('body').innerText()).replaceAll(originalProfile.stateText,''),/[가-힣ㄱ-ㅎㅏ-ㅣ]/,label);
    assert.doesNotMatch(await page.title(),/[가-힣]/,label+' title');
    const layout=await page.evaluate(()=>({content:document.documentElement.scrollWidth,viewport:innerWidth}));
@@ -69,11 +69,30 @@ try{
   }
   for(const path of ['/','/credits','/pricing','/guide','/usage-policy','/support','/profile?tab=state','/lens','/category','/advisor','/decision','/attendance','/billing/fail','/billing/success','/reports/weekly','/reports/monthly']){
    await page.goto(origin+path,{waitUntil:'domcontentloaded'});
-   await page.waitForFunction(()=>document.documentElement.lang==='en');
+   await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.documentElement.dataset.preferencesReady==='true');
    if(path==='/credits')await page.getByText('Payment pending',{exact:false}).waitFor();
    if(path==='/profile?tab=state')assert.equal(await page.locator('textarea').inputValue(),originalProfile.stateText);
    await checkEnglish(path);
+   if(path==='/'||path==='/credits')await page.screenshot({path:`${evidence}/${path==='/'?'home':'credits'}-english-${width}.png`,fullPage:true});
   }
+  await page.goto(origin+'/advisor',{waitUntil:'domcontentloaded'});
+  await waitForPreferences(page,'en');
+  await page.getByRole('button',{name:'Work · study',exact:true}).click();
+  await page.getByRole('button',{name:'Next',exact:true}).click();
+  await page.getByRole('button',{name:'Under $200',exact:true}).waitFor();
+  await page.getByRole('combobox',{name:'Shopping region',exact:true}).selectOption('GB');
+  await page.getByRole('button',{name:'Under GBP £150',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Menu',exact:true}).click();
+  await page.getByRole('button',{name:'Korean',exact:true}).click();
+  await page.getByRole('button',{name:'메뉴',exact:true}).click();
+  assert.equal(await page.getByRole('combobox',{name:'제품을 구매할 지역',exact:true}).inputValue(),'GB');
+  assert.ok((await page.locator('main').innerText()).includes('£150'));
+  await page.getByRole('button',{name:'메뉴',exact:true}).click();
+  await page.getByRole('button',{name:'English',exact:true}).click();
+  await page.getByRole('button',{name:'Menu',exact:true}).click();
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.getByRole('button',{name:'Work · study',exact:true}).waitFor();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('buysor-market')),'GB');
   await page.goto(origin+'/profile?tab=survey',{waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Next',exact:true}).waitFor();
   await checkEnglish('survey traits');

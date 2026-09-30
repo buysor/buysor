@@ -17,6 +17,8 @@ import {
 import { usePreferences } from "@/components/preferences-provider";
 import type { DecisionAnswers, DecisionDraft, UserModelPayload } from "@/lib/buysor-types";
 import { trackEvent } from "@/lib/analytics-client";
+import { budgetOptions, budgetLabel } from '@/lib/market';
+import { MarketSelector } from '@/components/market-selector';
 
 const steps = [
   {
@@ -93,7 +95,7 @@ const steps = [
 ] as const;
 
 export function AdvisorForm() {
-  const { language } = usePreferences();
+  const { language, currency } = usePreferences();
   const ko = language === "ko";
   const [draft, setDraft] = useState<DecisionDraft | null>(null);
   const [step, setStep] = useState(0);
@@ -215,7 +217,9 @@ export function AdvisorForm() {
         <small style={{ display: "block", margin: "-4px 0 18px", color: "var(--muted)", lineHeight: 1.6 }}>{ko ? current.help.ko : current.help.en}</small>
 
         <div className="option-grid">
-          {current.options.map((option) => (
+          {(current.id === 'budget' ? [
+            ...(selected && !budgetOptions(currency,'decision',language).some(row=>row.value===selected) ? [{id:selected,ko:`${budgetLabel(selected,'ko')??current.options.find(row=>row.id===selected)?.ko??selected} (저장된 예산)`,en:`${budgetLabel(selected,'en')??current.options.find(row=>row.id===selected)?.en??selected} (saved budget)`}] : []),
+            ...budgetOptions(currency, 'decision', language).map(row => ({ id: row.value, ko: row.label, en: row.label }))] : current.options).map((option) => (
             <button
               className={selected === option.id ? "selected" : ""}
               key={option.id}
@@ -227,11 +231,12 @@ export function AdvisorForm() {
             </button>
           ))}
         </div>
+        {current.id === 'budget' ? <div style={{marginTop:16}}><MarketSelector /><p style={{fontSize:12,color:'var(--muted)'}}>{ko ? '가격·세금·배송비를 포함한 전체 제품 예산을 기준으로 선택하세요.' : 'Think about the full product cost, including sales tax or VAT, delivery and required accessories.'}</p></div> : null}
 
         {step === steps.length - 1 ? (
           <label className="advisor-note">
             <span>{ko ? "이번 구매에서 꼭 반영할 내용" : "Anything else"} <small>{ko ? "선택" : "Optional"}</small></span>
-            <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={ko ? "예: 1.5kg 이하여야 함, 특정 프로그램 필수, 중고는 배터리 상태 90% 이상만, 다음 달 이사 예정 등" : "e.g. must be under 1.5kg, specific software required..."} maxLength={1000} />
+            <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={ko ? "예: 1.5kg 이하여야 함, 특정 프로그램 필수, 중고는 배터리 상태 90% 이상만, 다음 달 이사 예정 등" : "e.g. must run my work software, refurbished with a good battery, moving next month…"} maxLength={1000} />
           </label>
         ) : null}
       </div>

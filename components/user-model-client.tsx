@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePreferences } from "@/components/preferences-provider";
-import { getOptionLabel, getQuestionCopy, getStepCopy } from "@/lib/user-model-locale";
+import { getSurveyOptions, getQuestionCopy, getStepCopy } from "@/lib/user-model-locale";
+import { MarketSelector } from '@/components/market-selector';
 import { trackEvent } from "@/lib/analytics-client";
 import {
   CheckCircle2,
@@ -38,7 +39,7 @@ const EMPTY_PROFILE: UserModelPayload = {
 };
 
 const EXAMPLE_TEXT = "다음 달 이사 예정이고 예산은 150만원 정도예요. 지금 M1 맥북에어를 쓰는데 영상편집이 느립니다. 중고도 괜찮고 급하지 않아서 한두 달 기다릴 수 있어요. 2~3년은 쓰고 싶습니다.";
-const EXAMPLE_TEXT_EN = "I'm moving next month and my budget is around KRW 1,500,000. I use an M1 MacBook Air, but video editing feels slow. Used products are fine, and I can wait a month or two. I want to keep it for 2–3 years.";
+const EXAMPLE_TEXT_EN = "I'm moving next month and my budget is around US$1,000. I use an M1 MacBook Air, but video editing feels slow. Used or refurbished products with a reliable return policy are fine. I can wait a month or two and want to keep it for 2–3 years.";
 const PROFILE_STORAGE_KEY = "buysor-user-model";
 const PROFILE_PENDING_SYNC_KEY = "buysor-user-model-pending-sync";
 
@@ -156,7 +157,7 @@ export function PersonalizationBanner() {
 }
 
 export function UserModelClient() {
-  const { language } = usePreferences();
+  const { language, market } = usePreferences();
   const ko = language === "ko";
   const [tab, setTab] = useState<"state" | "survey">("state");
   const [authState, setAuthState] = useState<AuthState>("loading");
@@ -463,6 +464,7 @@ export function UserModelClient() {
             <h2>{currentCopy.title}</h2><p>{currentCopy.description}</p><p style={{marginTop:8,fontSize:11}}>{ko ? "모든 문항은 선택사항입니다. 원하는 만큼 답하고 언제든 이어서 할 수 있습니다." : "Every question is optional. Answer what matters and continue later anytime."}</p>
 
             <div className={styles.questionList}>
+              {current.id === 'finance' || current.id === 'category-car' ? <MarketSelector /> : null}
               {current.questions.map((question) => {
                 const copy = getQuestionCopy(question, language);
                 const scaleAnswered = typeof answers[question.id] === "number";
@@ -477,10 +479,10 @@ export function UserModelClient() {
                   </div>
                   {question.kind === "choice" ? (
                     <div className={styles.choiceGrid}>
-                      {(question.options ?? []).map((option) => {
+                      {getSurveyOptions(question, language, market, answers[question.id]).map(({value: option, label}) => {
                         const answer = answers[question.id];
                         const selected = Array.isArray(answer) ? answer.includes(option) : answer === option;
-                        return <button type="button" key={option} aria-pressed={selected} data-selected={selected} onClick={() => setAnswer(question, option)}>{getOptionLabel(question, option, language)}</button>;
+                        return <button type="button" key={option} aria-pressed={selected} data-selected={selected} onClick={() => setAnswer(question, option)}>{label}</button>;
                       })}
                     </div>
                   ) : (

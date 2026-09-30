@@ -15,7 +15,7 @@ export function trackEvent(name:string, properties:Properties={}) {
     const attribution=getAttribution();
     const payload={
       id:crypto.randomUUID(),visitorId,sessionId,name,path:location.pathname+location.search,
-      referrerHost:referrerHost(),...attribution,device:deviceClass(),language:document.documentElement.lang||"ko",
+      referrerHost:referrerHost(),...attribution,device:deviceClass(),language:document.documentElement.lang||"en",
       properties:cleanProperties(properties),
     };
     void fetch("/api/analytics/event",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),keepalive:true}).catch(()=>{});
@@ -60,3 +60,4 @@ function cleanProperties(input:Properties) {
   }
   return output;
 }
+

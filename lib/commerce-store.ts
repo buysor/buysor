@@ -1,6 +1,6 @@
 import { getD1Binding } from '@/db';
-import { SCHEMA_SQL } from './commerce-schema';
-import { POLICY_VERSION, type Feature } from './commerce-policy';
+import { SCHEMA_SQL, MARKET_SCHEMA_SQL } from './commerce-schema';
+import { POLICY_VERSION, BILLING_POLICY_VERSION, type Feature } from './commerce-policy';
 import { PublicError } from './request-safety';
 
 type DB = ReturnType<typeof getD1Binding>;
@@ -12,6 +12,8 @@ export async function commerceDb(): Promise<DB> {
    let applied=false;
    try { applied=Boolean(await db.prepare('SELECT version FROM commerce_meta WHERE version=?').bind(POLICY_VERSION).first()); } catch {}
    if (!applied) await db.batch(SCHEMA_SQL.map(sql=>db.prepare(sql)));
+   const marketApplied = await db.prepare('SELECT version FROM commerce_meta WHERE version=?').bind(BILLING_POLICY_VERSION).first();
+   if (!marketApplied) await db.batch(MARKET_SCHEMA_SQL.map(sql=>db.prepare(sql)));
  })().catch(error=>{ready=null;throw error;});
  await ready; return db;
 }

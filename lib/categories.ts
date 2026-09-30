@@ -17,13 +17,13 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
   {
     id: "digital",
     ko: "디지털 · IT",
-    en: "Digital · IT",
+    en: "Electronics",
     categories: [
       {
         id: "computer",
         majorId: "digital",
         ko: "컴퓨터 · 태블릿",
-        en: "Computers · tablets",
+        en: "Computers & tablets",
         subcategories: [
           { id: "laptop", ko: "노트북", en: "Laptop" },
           { id: "desktop", ko: "데스크탑", en: "Desktop" },
@@ -37,7 +37,7 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
         id: "mobile",
         majorId: "digital",
         ko: "모바일 · 웨어러블",
-        en: "Mobile · wearable",
+        en: "Phones & wearables",
         subcategories: [
           { id: "smartphone", ko: "스마트폰", en: "Smartphone" },
           { id: "smartwatch", ko: "스마트워치", en: "Smartwatch" },
@@ -51,7 +51,7 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
         id: "display-audio",
         majorId: "digital",
         ko: "TV · 오디오",
-        en: "TV · audio",
+        en: "TV & audio",
         subcategories: [
           { id: "tv", ko: "TV", en: "TV" },
           { id: "projector", ko: "프로젝터", en: "Projector" },
@@ -65,7 +65,7 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
         id: "creator",
         majorId: "digital",
         ko: "카메라 · 크리에이터",
-        en: "Camera · creator",
+        en: "Cameras & creator gear",
         subcategories: [
           { id: "camera", ko: "카메라", en: "Camera" },
           { id: "lens", ko: "렌즈", en: "Lens" },
@@ -80,7 +80,7 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
   {
     id: "home",
     ko: "가전 · 생활",
-    en: "Home · living",
+    en: "Appliances & home",
     categories: [
       {
         id: "home-appliance",
@@ -114,7 +114,7 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
         id: "living",
         majorId: "home",
         ko: "가구 · 생활",
-        en: "Furniture · living",
+        en: "Furniture & home essentials",
         subcategories: [
           { id: "chair", ko: "의자", en: "Chair" },
           { id: "desk", ko: "책상", en: "Desk" },
@@ -129,7 +129,7 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
   {
     id: "work",
     ko: "공구 · 작업",
-    en: "Tools · work",
+    en: "Power tools & workshop",
     categories: [
       {
         id: "power-tools",
@@ -137,11 +137,11 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
         ko: "전동공구",
         en: "Power tools",
         subcategories: [
-          { id: "drill-driver", ko: "드릴 · 드라이버", en: "Drill · driver" },
-          { id: "impact", ko: "임팩트 · 렌치", en: "Impact · wrench" },
+          { id: "drill-driver", ko: "드릴 · 드라이버", en: "Drills & drivers" },
+          { id: "impact", ko: "임팩트 · 렌치", en: "Impact drivers & wrenches" },
           { id: "rotary-hammer", ko: "해머 · 함마드릴", en: "Rotary hammer" },
-          { id: "saw", ko: "원형톱 · 절단기", en: "Saw · cutter" },
-          { id: "grinder", ko: "그라인더 · 연마", en: "Grinder · sanding" },
+          { id: "saw", ko: "원형톱 · 절단기", en: "Saws & cutting tools" },
+          { id: "grinder", ko: "그라인더 · 연마", en: "Grinders & sanders" },
           { id: "nailer", ko: "타카 · 네일러", en: "Nailer" },
         ],
       },
@@ -149,7 +149,7 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
         id: "workshop",
         majorId: "work",
         ko: "작업장비 · 측정",
-        en: "Workshop · measuring",
+        en: "Workshop & measuring tools",
         subcategories: [
           { id: "dust", ko: "집진기", en: "Dust extractor" },
           { id: "laser", ko: "레이저 레벨", en: "Laser level" },
@@ -164,13 +164,13 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
   {
     id: "mobility-major",
     ko: "차량 · 이동",
-    en: "Vehicle · mobility",
+    en: "Auto & mobility",
     categories: [
       {
         id: "car",
         majorId: "mobility-major",
         ko: "자동차 용품 · 전장",
-        en: "Car gear · electronics",
+        en: "Car accessories & electronics",
         subcategories: [
           { id: "dashcam", ko: "블랙박스", en: "Dash cam" },
           { id: "navigation", ko: "내비게이션 · CarPlay", en: "Navigation · CarPlay" },
@@ -184,7 +184,7 @@ export const PRODUCT_CATEGORY_TREE: ProductMajorCategory[] = [
         id: "mobility",
         majorId: "mobility-major",
         ko: "퍼스널 모빌리티",
-        en: "Personal mobility",
+        en: "Bikes & e-mobility",
         subcategories: [
           { id: "scooter", ko: "전동킥보드", en: "E-scooter" },
           { id: "bike", ko: "자전거", en: "Bike" },
@@ -205,3 +205,4 @@ export function findCategory(categoryId?: string | null, subcategoryId?: string 
   const subcategory = category?.subcategories.find((item) => item.id === subcategoryId) ?? null;
   return { major, category, subcategory };
 }
+

@@ -13,10 +13,11 @@ const PAGE_TITLES: Record<string, [string, string]> = {
   "/usage-policy": ["사용권 가이드", "Credit policy"],
   "/guide": ["이용 가이드", "Usage guide"],
   "/support": ["고객지원", "Support"],
-  "/attendance": ["출석 기록", "Attendance"],
+  "/attendance": ["출석 기록", "Daily check-in"],
   "/login": ["로그인", "Sign in"],
   "/reports/weekly": ["주간 리포트", "Weekly report"],
   "/reports/monthly": ["월간 리포트", "Monthly report"],
+  "/billing/checkout": ["안전한 결제", "Secure checkout"],
   "/billing/success": ["결제 확인", "Payment verification"],
   "/billing/fail": ["결제 확인", "Payment verification"],
   "/admin": ["운영 대시보드", "Operations dashboard"],
@@ -58,6 +59,7 @@ const ERROR_EN: Record<string, string> = {
   ORDER_NOT_PENDING: "Check the current order status.",
   PAYMENT_NOT_DONE: "Credits are added only after payment is confirmed.",
   REFUND_REVIEW: "Support needs to review the order status and credit usage before confirming a refund.",
+  REFUND_REJECTED: "The refund request was declined. Credits are available again; contact support.",
   REFUND_PENDING: "The refund is being verified. Credits remain locked until verification finishes.",
   AI_NOT_CONFIGURED: "The analysis service is preparing. Credits are not charged.",
   CHECKOUT_NOT_READY: "Payment integration and service verification are in progress. No payment is made yet.",
@@ -79,9 +81,17 @@ const ERROR_EN: Record<string, string> = {
   INVALID_QUESTION: "Enter a question between 1 and 900 characters.",
 };
 
+const ERROR_KO: Record<string,string> = {
+ PAYMENTS_OFFLINE:"아직 결제가 연결되지 않았습니다.",PAYMENT_PROVIDER_ERROR:"결제 상태를 확인하지 못했습니다. 같은 주문 번호로 다시 확인해 주세요.",
+ PAYMENT_MISMATCH:"주문과 결제 정보가 일치하지 않습니다. 고객지원에 문의해 주세요.",ORDER_NOT_FOUND:"주문을 찾지 못했습니다.",PRICE_CHANGED:"현재 가격을 확인하고 다시 진행해 주세요.",
+ ORDER_LIMIT:"주문 요청이 많습니다. 기존 주문을 먼저 확인해 주세요.",INVALID_CHECKOUT:"결제창 주소를 확인하지 못했습니다.",ORDER_NOT_PENDING:"현재 주문 상태를 확인해 주세요.",
+ PAYMENT_NOT_DONE:"결제가 확인된 후 크레딧을 지급합니다.",PAYMENT_REVIEW:"결제 상태를 고객지원에서 확인해야 합니다.",REFUND_REVIEW:"주문과 사용 내역을 고객지원에서 확인해야 합니다.",
+ REFUND_REJECTED:"환불 요청이 승인되지 않았습니다. 크레딧을 다시 사용할 수 있습니다. 고객지원에 문의해 주세요.",REFUND_PENDING:"환불 확인 중입니다. 확인이 끝날 때까지 해당 크레딧을 잠시 보류합니다.",CHECKOUT_NOT_READY:"결제를 준비 중입니다. 아직 요금이 청구되지 않습니다.",
+};
+
 export function localizeError(message: unknown, language: Language, fallback: string, code?: string) {
   const text = typeof message === "string" ? message : "";
-  if (language === "ko") return text || fallback;
+  if (language === "ko") return (code && ERROR_KO[code]) || (/[가-힣]/.test(text) ? text : fallback);
   if (code && ERROR_EN[code]) return ERROR_EN[code];
   if (code?.startsWith("REQUEST_")) return "This request has already been processed or is in progress. Check its status first.";
   if (text === "로그인이 필요합니다.") return "Please sign in.";

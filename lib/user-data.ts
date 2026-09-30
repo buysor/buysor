@@ -155,7 +155,7 @@ export async function listDecisionHistory(user: ChatGPTUser, limit = 20): Promis
   return (result.results ?? []).map(toHistoryItem);
 }
 
-export async function getReportData(user: ChatGPTUser, period: "weekly" | "monthly", language: "ko" | "en" = "ko"): Promise<ReportData> {
+export async function getReportData(user: ChatGPTUser, period: "weekly" | "monthly", language: "ko" | "en" = "en"): Promise<ReportData> {
   const ko = language === "ko";
   const tier = await getSubscriptionTier(user);
   const days = period === "weekly" ? 7 : 30;

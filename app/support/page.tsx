@@ -5,6 +5,7 @@ import { Bot, Mail, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react"
 import { SiteShell } from "@/components/site-shell";
 import { usePreferences } from "@/components/preferences-provider";
 import styles from "./support.module.css";
+import { localizeError } from "@/lib/ui-locale";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -16,6 +17,7 @@ type ApiReply = {
   handoffSuggested?: boolean;
   suggestedQuestions?: string[];
   error?: string;
+  code?: string;
 };
 
 const initialMessages: ChatMessage[] = [
@@ -34,11 +36,13 @@ const initialSuggestions = [
 export default function SupportPage() {
   const { language } = usePreferences();
   const ko = language === "ko";
-  const [messages, setMessages] = useState<ChatMessage[]>(ko ? initialMessages : [{role:"assistant",content:"Hello. BUYSOR Support can help with credits, sign-in, Lens, purchase-decision usage and error reports."}]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const greeting = ko ? initialMessages[0] : {role: "assistant" as const, content: "Hello. BUYSOR Support can help with credits, sign-in, Lens, purchase-decision usage and error reports."};
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [handoffSuggested, setHandoffSuggested] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>(ko ? initialSuggestions : ["When are credits charged?","How do I use Lens?","I keep getting signed out"]);
+  const [suggestions, setSuggestions] = useState<{language: "ko" | "en"; items: string[]} | null>(null);
+  const visibleSuggestions = suggestions?.language === language ? suggestions.items : ko ? initialSuggestions : ["When are credits charged?", "How do I use Lens?", "I keep getting signed out"];
 
   const history = useMemo(() => messages.slice(-8), [messages]);
 
@@ -64,12 +68,12 @@ export default function SupportPage() {
       const body = await response.json() as ApiReply;
       const reply = response.ok && body.reply
         ? body.reply
-        : body.error || (ko ? "상담봇 응답을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." : "Could not load a support reply. Please try again shortly.");
+        : localizeError(body.error, language, ko ? "상담봇 응답을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." : "Could not load a support reply. Please try again shortly.", body.code);
 
       setMessages((current) => [...current, { role: "assistant", content: reply }]);
       setHandoffSuggested(Boolean(body.handoffSuggested) || !response.ok);
       if (Array.isArray(body.suggestedQuestions) && body.suggestedQuestions.length) {
-        setSuggestions(body.suggestedQuestions.slice(0, 3));
+        setSuggestions({language, items: body.suggestedQuestions.slice(0, 3)});
       }
     } catch {
       setMessages((current) => [
@@ -91,25 +95,25 @@ export default function SupportPage() {
         <section className={styles.intro}>
           <div>
             <span className={styles.eyebrow}>BUYSOR SUPPORT</span>
-            <h1>도움이 필요하신가요?</h1>
-            <p>먼저 상담봇으로 빠르게 해결하고, 계정 확인이 필요한 문제만 직접 문의로 넘깁니다.</p>
+            <h1>{ko ? "도움이 필요하신가요?" : "Need help?"}</h1>
+            <p>{ko ? "먼저 상담봇으로 빠르게 해결하고, 계정 확인이 필요한 문제만 직접 문의로 넘깁니다." : "Start with the support guide. Contact us directly when your account needs review."}</p>
           </div>
 
           <div className={styles.trustRow}>
-            <span><Sparkles size={16} /> 빠른 해결</span>
-            <span><Bot size={16} /> 24시간 상담</span>
-            <span><ShieldCheck size={16} /> 비밀정보 비노출</span>
+            <span><Sparkles size={16} /> {ko ? "빠른 해결" : "Quick help"}</span>
+            <span><Bot size={16} /> {ko ? "24시간 상담" : "24-hour support"}</span>
+            <span><ShieldCheck size={16} /> {ko ? "비밀정보 비노출" : "Keep private information safe"}</span>
           </div>
         </section>
 
         <section className={styles.grid}>
           <aside className={styles.sidebar}>
             <h2>{ko?"상담 항목":"Help topics"}</h2>
-            <button type="button" onClick={() => sendMessage("구매 판단 이용법을 알려줘")}>구매 판단 이용법 <span>판단 결과와 기능 사용</span></button>
-            <button type="button" onClick={() => sendMessage("크레딧과 멤버십 차이를 알려줘")}>결제·크레딧 <span>멤버십, 충전, 사용 내역</span></button>
-            <button type="button" onClick={() => sendMessage("로그인 문제가 있어")}>계정·로그인 <span>로그인과 프로필 문제</span></button>
-            <button type="button" onClick={() => sendMessage("오류 신고는 어떻게 해?")}>오류 신고 <span>화면과 기능의 문제</span></button>
-            <button type="button" onClick={() => sendMessage("기타 질문이 있어")}>기타 질문 <span>그 밖의 궁금한 점</span></button>
+            <button type="button" onClick={() => sendMessage(ko ? "구매 판단 이용법을 알려줘" : "How do I use purchase decisions?")}>{ko ? "구매 판단 이용법" : "Purchase decisions"} <span>{ko ? "판단 결과와 기능 사용" : "Results and features"}</span></button>
+            <button type="button" onClick={() => sendMessage(ko ? "크레딧과 멤버십 차이를 알려줘" : "What is the difference between credits and membership?")}>{ko ? "결제·크레딧" : "Billing and credits"} <span>{ko ? "멤버십, 충전, 사용 내역" : "Membership, top-ups and history"}</span></button>
+            <button type="button" onClick={() => sendMessage(ko ? "로그인 문제가 있어" : "I have a sign-in problem")}>{ko ? "계정·로그인" : "Account and sign-in"} <span>{ko ? "로그인과 프로필 문제" : "Sign-in and profile issues"}</span></button>
+            <button type="button" onClick={() => sendMessage(ko ? "오류 신고는 어떻게 해?" : "How do I report an error?")}>{ko ? "오류 신고" : "Report an error"} <span>{ko ? "화면과 기능의 문제" : "Screen and feature issues"}</span></button>
+            <button type="button" onClick={() => sendMessage(ko ? "기타 질문이 있어" : "I have another question")}>{ko ? "기타 질문" : "Other questions"} <span>{ko ? "그 밖의 궁금한 점" : "Anything else"}</span></button>
           </aside>
 
           <section className={styles.chatPanel}>
@@ -122,7 +126,7 @@ export default function SupportPage() {
             </div>
 
             <div className={styles.messages} aria-live="polite">
-              {messages.map((message, index) => (
+              {[greeting, ...messages].map((message, index) => (
                 <div key={`${message.role}-${index}`} className={message.role === "user" ? styles.userRow : styles.assistantRow}>
                   <div className={styles.avatar}>{message.role === "user" ? <UserRound size={16} /> : <Bot size={16} />}</div>
                   <div className={styles.bubble}>{message.content}</div>
@@ -137,7 +141,7 @@ export default function SupportPage() {
             </div>
 
             <div className={styles.suggestions}>
-              {suggestions.map((suggestion) => (
+              {visibleSuggestions.map((suggestion) => (
                 <button key={suggestion} type="button" onClick={() => sendMessage(suggestion)} disabled={loading}>{suggestion}</button>
               ))}
             </div>
@@ -164,9 +168,9 @@ export default function SupportPage() {
 
           <aside className={styles.contactCard}>
             <Mail size={20} />
-            <h2>직접 문의하기</h2>
-            <p>결제 분쟁, 중복 차감, 반복 로그인 실패처럼 계정 확인이 필요한 문제는 직접 문의로 넘깁니다.</p>
-            <a href="mailto:peon9339@gmail.com?subject=BUYSOR%20고객지원%20문의">{ko?"이메일로 직접 문의":"Contact by email"}</a>
+            <h2>{ko ? "직접 문의하기" : "Contact us directly"}</h2>
+            <p>{ko ? "결제 분쟁, 중복 차감, 반복 로그인 실패처럼 계정 확인이 필요한 문제는 직접 문의로 넘깁니다." : "Contact us directly for payment disputes, duplicate charges or repeated sign-in failures that need account review."}</p>
+            <a href={ko ? "mailto:peon9339@gmail.com?subject=BUYSOR%20고객지원%20문의" : "mailto:peon9339@gmail.com?subject=BUYSOR%20Support%20Request"}>{ko?"이메일로 직접 문의":"Contact by email"}</a>
             <small>{ko?"현재는 이메일 클라이언트를 여는 임시 연결입니다. 서버 전송형 문의 시스템은 별도 연결이 필요합니다.":"This currently opens your email client. A server-side support form is not connected yet."}</small>
             {handoffSuggested ? <div className={styles.handoff}>{ko?"이 문의는 직접 확인이 필요한 가능성이 높습니다.":"This issue likely needs direct review."}</div> : null}
           </aside>

@@ -153,11 +153,11 @@ export function AdvisorForm() {
   const profileDetails = useMemo(() => {
     if (!profileReady || !profile) return [];
     const parts: string[] = [];
-    if (profile.stateText) parts.push("현재 상태");
-    if (Object.keys(profile.survey ?? {}).length) parts.push(`정밀 프로필 ${profile.completion}%`);
-    if (profile.structuredState) parts.push("AI 구조화 상태");
+    if (profile.stateText) parts.push(ko ? "현재 상태" : "Current situation");
+    if (Object.keys(profile.survey ?? {}).length) parts.push(ko ? `정밀 프로필 ${profile.completion}%` : `Detailed profile ${profile.completion}%`);
+    if (profile.structuredState) parts.push(ko ? "AI 구조화 상태" : "AI-structured context");
     return parts;
-  }, [profile, profileReady]);
+  }, [profile, profileReady, ko]);
 
   function select(value: string) {
     setAnswers((previous) => ({ ...previous, [current.id]: value }));
@@ -204,7 +204,7 @@ export function AdvisorForm() {
         {!profileReady ? <a href="/profile" style={{ fontSize: 11, fontWeight: 800, color: "var(--blue)", whiteSpace: "nowrap" }}>{ko ? "프로필 만들기" : "Build profile"}</a> : null}
       </div>
 
-      <div className="advisor-progress" aria-label={`질문 ${step + 1} / ${steps.length}`}>
+      <div className="advisor-progress" aria-label={ko ? `질문 ${step + 1} / ${steps.length}` : `Question ${step + 1} of ${steps.length}`}>
         {steps.map((item, index) => <i className={index <= step ? "active" : ""} key={item.id} />)}
       </div>
 

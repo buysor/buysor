@@ -169,7 +169,7 @@ export async function getReportData(user: ChatGPTUser, period: "weekly" | "month
 
   const categories = new Map<string, number>();
   for (const item of history) {
-    const label = item.subcategoryId || item.categoryId || inputCategoryLabel(item.inputType);
+    const label = item.subcategoryId || item.categoryId || inputCategoryLabel(item.inputType, language);
     categories.set(label, (categories.get(label) ?? 0) + 1);
   }
   const maxCategory = Math.max(1, ...categories.values());
@@ -215,7 +215,7 @@ export async function getReportData(user: ChatGPTUser, period: "weekly" | "month
     .map((item) => ({
       id: item.id,
       title: item.inputLabel,
-      when: item.result?.recheckAt || "조건 충족 시",
+      when: item.result?.recheckAt || (ko ? "조건 충족 시" : "When conditions are met"),
       action: item.result?.waitFor || (ko ? "시장·가격·필요성 다시 확인" : "Recheck market, price and need"),
     }));
 
@@ -320,11 +320,11 @@ function decisionLabel(draft: DecisionDraft) {
   return draft.value.slice(0, 240);
 }
 
-function inputCategoryLabel(type: string) {
-  if (type === "photo") return "사진 입력";
-  if (type === "link") return "상품 링크";
-  if (type === "name") return "제품명";
-  return "카테고리";
+function inputCategoryLabel(type: string, language: "ko" | "en") {
+  if (type === "photo") return language === "ko" ? "사진 입력" : "Photo input";
+  if (type === "link") return language === "ko" ? "상품 링크" : "Product link";
+  if (type === "name") return language === "ko" ? "제품명" : "Product name";
+  return language === "ko" ? "카테고리" : "Category";
 }
 
 function humanizeCategory(value: string) {

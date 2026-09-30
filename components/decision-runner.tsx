@@ -23,6 +23,7 @@ import {usePreferences} from "@/components/preferences-provider";
 import {FEATURES,POLICY_VERSION} from "@/lib/commerce-policy";
 import {trackEvent} from "@/lib/analytics-client";
 import {DecisionFeedback} from "@/components/decision-feedback";
+import {localizeError} from "@/lib/ui-locale";
 import styles from "./decision-result.module.css";
 
 type Runtime = { configured: boolean; provider: string | null; model: string | null };
@@ -125,7 +126,7 @@ export function DecisionRunner() {
         setPhase("missing-ai");
         return;
       }
-      if (!response.ok || !payload.result) { if(payload.requestState==="failed"||payload.code==="REQUEST_FAILED")requestKey.current=null;throw new Error(payload.error || (ko?"구매 판단 생성에 실패했습니다.":"Could not create the purchase decision."));}
+      if (!response.ok || !payload.result) { if(payload.requestState==="failed"||payload.code==="REQUEST_FAILED")requestKey.current=null;throw new Error(localizeError(payload.error,language,ko?"구매 판단 생성에 실패했습니다.":"Could not create the purchase decision.",payload.code));}
       setResult(payload.result);
       setDecisionId(payload.id??null);
       trackEvent("decision_completed",{verdict:payload.result.verdict,inputType:draft.type,evidenceSources:payload.result.evidenceSources?.length??0});

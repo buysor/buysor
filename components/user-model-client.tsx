@@ -38,6 +38,7 @@ const EMPTY_PROFILE: UserModelPayload = {
 };
 
 const EXAMPLE_TEXT = "다음 달 이사 예정이고 예산은 150만원 정도예요. 지금 M1 맥북에어를 쓰는데 영상편집이 느립니다. 중고도 괜찮고 급하지 않아서 한두 달 기다릴 수 있어요. 2~3년은 쓰고 싶습니다.";
+const EXAMPLE_TEXT_EN = "I'm moving next month and my budget is around KRW 1,500,000. I use an M1 MacBook Air, but video editing feels slow. Used products are fine, and I can wait a month or two. I want to keep it for 2–3 years.";
 const PROFILE_STORAGE_KEY = "buysor-user-model";
 const PROFILE_PENDING_SYNC_KEY = "buysor-user-model-pending-sync";
 
@@ -80,20 +81,22 @@ async function putProfile(next: UserModelPayload) {
 }
 
 function QuestionHelp({ text }: { text: string }) {
+  const { language } = usePreferences();
+  const ko = language === "ko";
   const [open, setOpen] = useState(false);
   return (
     <span className={helpStyles.helpWrap} onMouseLeave={() => setOpen(false)}>
       <button
         type="button"
         className={helpStyles.helpButton}
-        aria-label="이 질문 설명 보기"
+        aria-label={ko ? "이 질문 설명 보기" : "Show question explanation"}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
         !
       </button>
       <span className={helpStyles.tooltip} data-open={open} role="tooltip">
-        <b>이 질문은 왜 묻나요?</b>
+        <b>{ko ? "이 질문은 왜 묻나요?" : "Why do we ask this?"}</b>
         <span>{text}</span>
       </span>
     </span>
@@ -104,7 +107,7 @@ export function PersonalizationBanner() {
   const { language } = usePreferences();
   const ko = language === "ko";
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState("아직 시작하지 않음");
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -146,7 +149,7 @@ export function PersonalizationBanner() {
       <div className={styles.profileSummary}>
         <div className={styles.summaryRow}><span>{ko ? "구매 프로필 완성도" : "Profile completion"}</span><strong>{progress}%</strong></div>
         <div className={styles.progressTrack}><span style={{ width: `${progress}%` }}/></div>
-        <div className={styles.summaryRow}><span>{ko ? "상태" : "Status"}</span><span>{status}</span></div>
+        <div className={styles.summaryRow}><span>{ko ? "상태" : "Status"}</span><span>{status || (ko ? "아직 시작하지 않음" : "Not started yet")}</span></div>
       </div>
     </section>
   );
@@ -365,25 +368,25 @@ export function UserModelClient() {
     const value = (id: string) => typeof answers[id] === "number" ? Number(answers[id]) : null;
     const performance = value("performance");
     return [
-      ["가격 민감도", performance === null ? null : 100 - performance],
-      ["성능 우선도", performance],
-      ["위험 회피도", value("risk")],
-      ["장기 보유 성향", value("ownership")],
-      ["중고 수용도", value("used")],
-      ["재판매 중요도", value("resale")],
+      [ko ? "가격 민감도" : "Price sensitivity", performance === null ? null : 100 - performance],
+      [ko ? "성능 우선도" : "Performance priority", performance],
+      [ko ? "위험 회피도" : "Risk aversion", value("risk")],
+      [ko ? "장기 보유 성향" : "Long-term ownership", value("ownership")],
+      [ko ? "중고 수용도" : "Used-product openness", value("used")],
+      [ko ? "재판매 중요도" : "Resale importance", value("resale")],
     ] as Array<[string, number | null]>;
-  }, [answers]);
+  }, [answers, ko]);
 
   const rows = structuredState ? [
-    ["현재 제품", structuredState.currentProduct],
-    ["주요 불만", structuredState.painPoint],
-    ["편안한 예산", structuredState.comfortableBudget],
-    ["최대 예산", structuredState.maximumBudget],
-    ["중고 구매", structuredState.usedAccepted === null ? null : structuredState.usedAccepted ? "가능" : "선호하지 않음"],
-    ["구매 긴급도", structuredState.urgency],
-    ["예상 사용기간", structuredState.expectedUsePeriod],
-    ["사용 환경", structuredState.environment],
-    ["미래 계획", structuredState.futurePlan],
+    [ko ? "현재 제품" : "Current product", structuredState.currentProduct],
+    [ko ? "주요 불만" : "Main pain point", structuredState.painPoint],
+    [ko ? "편안한 예산" : "Comfortable budget", structuredState.comfortableBudget],
+    [ko ? "최대 예산" : "Maximum budget", structuredState.maximumBudget],
+    [ko ? "중고 구매" : "Used products", structuredState.usedAccepted === null ? null : structuredState.usedAccepted ? (ko ? "가능" : "Accepted") : (ko ? "선호하지 않음" : "Not preferred")],
+    [ko ? "구매 긴급도" : "Urgency", structuredState.urgency],
+    [ko ? "예상 사용기간" : "Expected use period", structuredState.expectedUsePeriod],
+    [ko ? "사용 환경" : "Environment", structuredState.environment],
+    [ko ? "미래 계획" : "Future plans", structuredState.futurePlan],
   ] : [];
 
   return (
@@ -411,7 +414,7 @@ export function UserModelClient() {
               placeholder={ko ? "예: 현재 쓰는 제품, 불편한 점, 편한 예산과 최대 예산, 중고 가능 여부, 언제 필요한지, 사용 환경, 앞으로의 계획 등을 자유롭게 적어주세요." : "e.g. what you use now, pain points, comfortable/max budget, used-product openness, timing, environment and future plans"}
             />
             <div className={styles.exampleRow}>
-              <button type="button" onClick={() => updateText(EXAMPLE_TEXT)}>{ko ? "예시 한번 넣어보기" : "Insert example"}</button>
+              <button type="button" onClick={() => updateText(ko ? EXAMPLE_TEXT : EXAMPLE_TEXT_EN)}>{ko ? "예시 한번 넣어보기" : "Insert example"}</button>
               {text ? <button type="button" onClick={() => updateText("")}>{ko ? "비우기" : "Clear"}</button> : null}
               <span>{ko ? "예시는 자동 저장되지 않으며 직접 입력한 내용만 USER MODEL에 반영합니다." : "The example is not saved automatically; only your actual input is used."}</span>
             </div>
@@ -439,12 +442,12 @@ export function UserModelClient() {
               </div>
             ) : (
               <>
-                <div className={styles.insightCardHead}><strong>바이저가 이렇게 이해했습니다</strong><span className={styles.confirmed}><CheckCircle2 size={14}/> 분석 완료</span></div>
+                <div className={styles.insightCardHead}><strong>{ko ? "바이저가 이렇게 이해했습니다" : "How BUYSOR understands your situation"}</strong><span className={styles.confirmed}><CheckCircle2 size={14}/> {ko ? "분석 완료" : "Analysis complete"}</span></div>
                 <div className={styles.insightList}>
-                  {rows.map(([label, value]) => <div className={styles.insightRow} key={label}><span>{label}</span><strong>{value || "확인 필요"}</strong></div>)}
+                  {rows.map(([label, value]) => <div className={styles.insightRow} key={label}><span>{label}</span><strong>{value || (ko ? "확인 필요" : "Needs verification")}</strong></div>)}
                 </div>
-                {structuredState.mustHaves.length ? <div style={{ marginTop: 8, fontSize: 12 }}><strong>반드시 반영</strong><p style={{ color: "var(--muted)", lineHeight: 1.6 }}>{structuredState.mustHaves.join(" · ")}</p></div> : null}
-                {structuredState.uncertainties.length ? <div style={{ marginTop: 8, fontSize: 12 }}><strong>추가 확인 필요</strong><p style={{ color: "var(--muted)", lineHeight: 1.6 }}>{structuredState.uncertainties.join(" · ")}</p></div> : null}
+                {structuredState.mustHaves.length ? <div style={{ marginTop: 8, fontSize: 12 }}><strong>{ko ? "반드시 반영" : "Must include"}</strong><p style={{ color: "var(--muted)", lineHeight: 1.6 }}>{structuredState.mustHaves.join(" · ")}</p></div> : null}
+                {structuredState.uncertainties.length ? <div style={{ marginTop: 8, fontSize: 12 }}><strong>{ko ? "추가 확인 필요" : "Needs further verification"}</strong><p style={{ color: "var(--muted)", lineHeight: 1.6 }}>{structuredState.uncertainties.join(" · ")}</p></div> : null}
               </>
             )}
           </aside>

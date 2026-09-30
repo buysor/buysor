@@ -78,7 +78,7 @@ export function DashboardClient() {
       <article className="stat-card credit-card">
         <span><Coins size={18} /> {ko ? "사용 가능한 크레딧" : "Available credits"}</span>
         {balance !== null ? <strong>{balance}<small>C</small></strong> : state === "loading" ? <LoaderCircle className="spin" size={25} /> : <strong>—</strong>}
-        <p>{balance !== null ? (ko ? "결제로 확인된 사용권" : "Verified credits") : "잔액 확인 중"}</p>
+        <p>{balance !== null ? (ko ? "결제로 확인된 사용권" : "Verified credits") : (ko ? "잔액 확인 중" : "Checking balance")}</p>
       </article>
 
       <a className="stat-card streak-card" href="/attendance">
@@ -106,25 +106,25 @@ export function DashboardClient() {
       </a>
 
       <article className="empty-card profile-card">
-        <div><span className="section-kicker">MY DECISION PROFILE</span><h2>바이저가 이해하는 나</h2></div>
+        <div><span className="section-kicker">MY DECISION PROFILE</span><h2>{ko ? "바이저가 이해하는 나" : "How BUYSOR understands me"}</h2></div>
         {profileCompletion > 0 ? (
           <div className="empty-state">
-            <span>USER MODEL {profileCompletion}% 완성</span>
-            <p>{profile?.structuredState?.painPoint ? `최근 상태: ${profile.structuredState.painPoint}. ` : ""}{Object.keys(profile?.survey ?? {}).length}개 프로필 답변이 다음 구매 판단에 반영됩니다. <a href="/profile">업데이트 →</a></p>
+            <span>{ko ? `USER MODEL ${profileCompletion}% 완성` : `USER MODEL ${profileCompletion}% complete`}</span>
+            <p>{profile?.structuredState?.painPoint ? (ko ? `최근 상태: ${profile.structuredState.painPoint}. ` : `Recent context: ${profile.structuredState.painPoint}. `) : ""}{ko ? `${Object.keys(profile?.survey ?? {}).length}개 프로필 답변이 다음 구매 판단에 반영됩니다.` : `${Object.keys(profile?.survey ?? {}).length} profile answers will inform your next decision.`} <a href="/profile">{ko ? "업데이트 →" : "Update profile →"}</a></p>
           </div>
         ) : (
-          <div className="empty-state"><span>아직 구매 기준이 비어 있습니다.</span><p>현재 상황과 정밀 프로필을 채우면 매번 같은 설명을 반복하지 않아도 됩니다. <a href="/profile">프로필 설정 →</a></p></div>
+          <div className="empty-state"><span>{ko ? "아직 구매 기준이 비어 있습니다." : "Your purchase profile is empty."}</span><p>{ko ? "현재 상황과 정밀 프로필을 채우면 매번 같은 설명을 반복하지 않아도 됩니다." : "Add your situation and detailed profile so you do not have to repeat the same context."} <a href="/profile">{ko ? "프로필 설정 →" : "Build profile →"}</a></p></div>
         )}
       </article>
 
       <article className="empty-card history-card">
-        <div><span className="section-kicker">DECISION HISTORY</span><h2>최근 구매 결정</h2></div>
+        <div><span className="section-kicker">DECISION HISTORY</span><h2>{ko ? "최근 구매 결정" : "Recent purchase decisions"}</h2></div>
         {recent.length ? (
           <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
-            {recent.map((item) => <a href="/my" key={item.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 10, alignItems: "center", padding: 11, border: "1px solid var(--line)", borderRadius: 12, background: "var(--surface)" }}><b style={{ fontSize: 10, color: item.verdict === "BUY" ? "var(--green)" : item.verdict === "WAIT" ? "var(--amber)" : "var(--red)" }}>{item.verdict}</b><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12, fontWeight: 700 }}>{item.inputLabel}</span><small style={{ color: "var(--muted)", fontSize: 9 }}>{formatDate(item.createdAt)}</small></a>)}
+            {recent.map((item) => <a href="/my" key={item.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 10, alignItems: "center", padding: 11, border: "1px solid var(--line)", borderRadius: 12, background: "var(--surface)" }}><b style={{ fontSize: 10, color: item.verdict === "BUY" ? "var(--green)" : item.verdict === "WAIT" ? "var(--amber)" : "var(--red)" }}>{item.verdict}</b><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12, fontWeight: 700 }}>{item.inputLabel}</span><small style={{ color: "var(--muted)", fontSize: 9 }}>{formatDate(item.createdAt, language)}</small></a>)}
           </div>
         ) : (
-          <div className="empty-state"><span>저장된 AI 구매 결정이 없습니다.</span><p>첫 판단을 완료하면 BUY · WAIT · SKIP 결과와 근거가 계정에 쌓입니다.</p></div>
+          <div className="empty-state"><span>{ko ? "저장된 AI 구매 결정이 없습니다." : "No saved AI purchase decisions yet."}</span><p>{ko ? "첫 판단을 완료하면 BUY · WAIT · SKIP 결과와 근거가 계정에 쌓입니다." : "Complete your first decision to save BUY · WAIT · SKIP results and reasons to your account."}</p></div>
         )}
       </article>
 
@@ -133,7 +133,7 @@ export function DashboardClient() {
   );
 }
 
-function formatDate(value: number) {
+function formatDate(value: number, language: "ko" | "en") {
   if (!value) return "";
-  return new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric" }).format(new Date(value));
+  return new Intl.DateTimeFormat(language === "ko" ? "ko-KR" : "en-US", { month: "numeric", day: "numeric" }).format(new Date(value));
 }

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { ReportData } from "@/lib/buysor-types";
 import { usePreferences } from "@/components/preferences-provider";
+import {localizeError} from "@/lib/ui-locale";
 import styles from "./buysor-features.module.css";
 
 type ReportClientProps = { type: "weekly" | "monthly" };
@@ -38,8 +39,8 @@ export function ReportClient({ type }: ReportClientProps) {
         return;
       }
       const response = await fetch(`/api/reports?period=${type}&lang=${language}`, { cache: "no-store" });
-      const payload = await response.json() as ReportData & { error?: string };
-      if (!response.ok) throw new Error(payload.error || (ko ? "리포트를 불러오지 못했습니다." : "Could not load the report."));
+      const payload = await response.json() as ReportData & { error?: string; code?: string };
+      if (!response.ok) throw new Error(localizeError(payload.error,language,ko ? "리포트를 불러오지 못했습니다." : "Could not load the report.",payload.code));
       setData(payload);
       setState("ready");
     } catch (reason) {

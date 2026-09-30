@@ -7,7 +7,7 @@ await mkdir(evidence,{recursive:true});
 for(let i=0;i<90;i++){try{if((await fetch(origin)).ok)break;}catch{}if(i===89)throw Error('Server not ready');await new Promise(r=>setTimeout(r,1000));}
 const browser=await chromium.launch();const results=[];
 async function waitForPreferences(page,language='ko',theme='light'){
- await page.waitForFunction(expected=>document.documentElement.lang===expected.language&&document.documentElement.dataset.theme===expected.theme,{language,theme},{timeout:90000});
+ await page.waitForFunction(expected=>document.documentElement.dataset.preferencesReady==='true'&&document.documentElement.lang===expected.language&&document.documentElement.dataset.theme===expected.theme,{language,theme},{timeout:90000});
 }
 try{
  for(const width of [1440,768,390]){
@@ -60,7 +60,7 @@ try{
   });
   const page=await context.newPage();const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
   async function checkEnglish(label){
-   await page.waitForFunction(()=>document.documentElement.lang==='en');
+   await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.documentElement.dataset.preferencesReady==='true');
    assert.doesNotMatch((await page.locator('body').innerText()).replaceAll(originalProfile.stateText,''),/[가-힣ㄱ-ㅎㅏ-ㅣ]/,label);
    assert.doesNotMatch(await page.title(),/[가-힣]/,label+' title');
    const layout=await page.evaluate(()=>({content:document.documentElement.scrollWidth,viewport:innerWidth}));
@@ -69,7 +69,7 @@ try{
   }
   for(const path of ['/','/credits','/pricing','/guide','/usage-policy','/support','/profile?tab=state','/lens','/category','/advisor','/decision','/attendance','/billing/fail','/billing/success','/reports/weekly','/reports/monthly']){
    await page.goto(origin+path,{waitUntil:'domcontentloaded'});
-   await page.waitForFunction(()=>document.documentElement.lang==='en');
+   await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.documentElement.dataset.preferencesReady==='true');
    if(path==='/credits')await page.getByText('Payment pending',{exact:false}).waitFor();
    if(path==='/profile?tab=state')assert.equal(await page.locator('textarea').inputValue(),originalProfile.stateText);
    await checkEnglish(path);

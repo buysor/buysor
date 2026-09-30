@@ -107,6 +107,7 @@ export function getSurveyOptions(question: SurveyQuestion, language: 'ko' | 'en'
   let options = (question.options ?? []).map(value => ({ value, label: getOptionLabel(question, value, language, market) }));
   if (question.id === 'budgetComfort' || question.id === 'budgetMax') options = budgetOptions(MARKETS[market].currency, question.id === 'budgetComfort' ? 'comfort' : 'max', language);
   if (question.id === 'carDistance' && MARKETS[market].distance === 'mi') options = Array.from({length:5},(_,i)=>({value:`distance:mi:${i}`,label:getOptionLabel(question,`distance:mi:${i}`,language,market)}));
+  if(question.id==='toolPlatform') options.splice(Math.max(0,options.length-2),0,...['Ryobi','RIDGID','Craftsman','Metabo HPT'].map(value=>({value,label:value})));
   // Retain a saved answer in its original currency or units while offering the new region's choices.
   if (typeof answer === 'string' && !options.some(row=>row.value===answer)) {
     const label=getOptionLabel(question,answer,language,market);

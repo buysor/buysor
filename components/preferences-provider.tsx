@@ -45,6 +45,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!ready) return;
+    document.documentElement.dataset.preferencesReady = "true";
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     try { localStorage.setItem("buysor-theme", theme); } catch {}

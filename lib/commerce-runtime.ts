@@ -27,3 +27,11 @@ export function checkoutReady() {
 export function requireCheckout() {
  if(!checkoutReady())throw new PublicError(503,'CHECKOUT_NOT_READY','결제 연동과 서비스 검증을 준비 중입니다. 아직 결제되지 않습니다.');
 }
+
+/** Complete an already-authorized legacy domestic checkout using its original provider. */
+export function requireLegacyCheckout() {
+ const ready=process.env.BUYSOR_PAID_RELEASE==='1' && process.env.BUYSOR_COMMERCE_REVIEWED==='1'
+  && Boolean(process.env.TOSS_SECRET_KEY?.startsWith('live_sk_')) && Boolean(process.env.TOSS_MERCHANT_ID)
+  && Boolean(process.env.PUBLIC_ORIGIN?.startsWith('https://')) && runtimeConfig().configured;
+ if(!ready)throw new PublicError(503,'CHECKOUT_NOT_READY','결제 상태를 고객지원에서 확인해 주세요. 아직 추가 결제하지 않습니다.');
+}

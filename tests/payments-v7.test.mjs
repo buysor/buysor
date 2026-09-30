@@ -15,7 +15,7 @@ async function setup(){
  globalThis[key]={prepare(sql){let args=[];return {bind(...a){args=a;return this;},runSync(){const r=db.prepare(sql).run(...args);return {success:true,meta:{changes:Number(r.changes)}};},async run(){return this.runSync();},async first(){return db.prepare(sql).get(...args)??null;},async all(){return {results:db.prepare(sql).all(...args)};}};},async batch(items){db.exec('BEGIN IMMEDIATE');try{const out=items.map(i=>i.runSync());db.exec('COMMIT');return out;}catch(e){db.exec('ROLLBACK');throw e;}}};
  const storeURL=load('lib/commerce-store.ts',{'@/db':url(`export function getD1Binding(){return globalThis['${key}'];}`),'./commerce-schema':schema,'./commerce-policy':policy,'./request-safety':safety},`\n// ${seq}`);
  const st=await import(storeURL);await st.commerceDb();
- const api=await import(load('lib/payments.ts',{'./commerce-store':storeURL,'./commerce-policy':policy,'./commerce-runtime':url('export function requireCheckout(){}'),'./request-safety':safety}));
+ const api=await import(load('lib/payments.ts',{'./commerce-store':storeURL,'./commerce-policy':policy,'./commerce-runtime':url('export function requireLegacyCheckout(){}'),'./request-safety':safety}));
  process.env.TOSS_SECRET_KEY='test_sk_mock';process.env.TOSS_MERCHANT_ID='merchant';process.env.PUBLIC_ORIGIN='https://buysor.test';
  db.prepare("INSERT INTO billing_orders VALUES('order1','owner','pack20','v7',1900,20,'pending',NULL,1,NULL)").run();
  const payment={orderId:'order1',paymentKey:'payment1',mId:'merchant',currency:'KRW',totalAmount:1900,balanceAmount:1900,status:'DONE',approvedAt:'2026-09-18T00:00:00Z'};
@@ -52,3 +52,4 @@ test('external cancellation removes unused credit; consumed cancellation blocks 
 test('expired and frozen lots are excluded while valid owned credit stays usable',async()=>{
  const {api,payment,respond,st,db}=await setup();globalThis.fetch=async()=>respond(payment);await api.confirmOrder('owner','order1','payment1',1900);db.prepare('UPDATE credit_lots SET expires_at=?').run(Date.now()-1);assert.equal((await st.wallet('owner')).available,0);db.prepare('UPDATE credit_lots SET expires_at=NULL,frozen=1').run();assert.equal((await st.wallet('owner')).available,0);db.prepare('UPDATE credit_lots SET frozen=0').run();assert.equal((await st.wallet('owner')).available,20);
 });
+

@@ -3,7 +3,7 @@ import { BILLING_POLICY_VERSION, usdProductById } from './commerce-policy';
 import { requireCheckout } from './commerce-runtime';
 import { PublicError } from './request-safety';
 
-type Order = { id: string; user_id: string; amount: number; credits: number; status: string; payment_key: string | null; price_id: string; transaction_id: string | null; refund_requested: number; total_amount: number | null };
+type Order = { id: string; user_id: string; amount: number; credits: number; status: string; payment_key: string | null; price_id: string; transaction_id: string | null; refund_requested: number; refund_adjustment_id: string | null; total_amount: number | null };
 type Transaction = { id: string; status: string; currency_code: string; custom_data: { order_id?: string; user_id?: string; policy_version?: string } | null; items: Array<{ quantity: number; price: { id: string; billing_cycle: unknown; tax_mode: string; unit_price: { amount: string; currency_code: string } } }>; details: { totals: { subtotal: string; discount: string; tax: string; total: string; grand_total: string } }; checkout?: { url: string | null }; payments: Array<{ amount: string; status: string }>; adjustments?: Adjustment[] };
 type Adjustment = { id: string; transaction_id: string; action: string; type: string; status: string; currency_code: string; totals: { total: string } };
 const TXN = /^txn_[a-z\d]{26}$/;
@@ -25,7 +25,7 @@ async function paddle<T>(path: string, method: 'GET' | 'POST' = 'GET', body?: un
 }
 async function readOrder(id: string, userId?: string) {
   const db = await commerceDb();
-  const row = await db.prepare(`SELECT b.*, m.price_id,m.transaction_id,m.refund_requested,m.total_amount FROM billing_orders b JOIN billing_market m ON m.order_id=b.id WHERE b.id=? ${userId ? 'AND b.user_id=?' : ''}`).bind(...(userId ? [id, userId] : [id])).first<Order>();
+  const row = await db.prepare(`SELECT b.*, m.price_id,m.transaction_id,m.refund_requested,m.refund_adjustment_id,m.total_amount FROM billing_orders b JOIN billing_market m ON m.order_id=b.id WHERE b.id=? ${userId ? 'AND b.user_id=?' : ''}`).bind(...(userId ? [id, userId] : [id])).first<Order>();
   if (!row) throw new PublicError(404, 'ORDER_NOT_FOUND', 'Order not found.'); return row;
 }
 /** Verify the server-created quote, owner, transaction, product and captured payment. */
@@ -83,8 +83,8 @@ export async function confirmGlobalOrder(userId: string, id: string, transaction
 async function applyAdjustments(order: Order, transaction: Transaction) {
   const relevant = (transaction.adjustments || []).filter(a => ['refund','chargeback','chargeback_warning'].includes(a.action) && ['approved','pending_approval'].includes(a.status));
   if (!relevant.length) {
-    const rejected = transaction.adjustments?.some(a=>a.action==='refund' && a.type==='full' && a.status==='rejected' && a.transaction_id===transaction.id);
-    if (rejected && order.status==='refund_pending' && order.refund_requested===1) {
+    const rejected = transaction.adjustments?.some(a=>a.id===order.refund_adjustment_id && a.action==='refund' && a.type==='full' && a.status==='rejected' && a.transaction_id===transaction.id);
+    if (rejected && order.status==='refund_pending' && order.refund_adjustment_id) {
       const db=await commerceDb();
       await db.prepare("UPDATE billing_orders SET status='paid' WHERE id=? AND status='refund_pending'").bind(order.id).run();
       return true;
@@ -98,7 +98,9 @@ async function applyAdjustments(order: Order, transaction: Transaction) {
   }
   if (order.status === 'refunded') return true;
   if (order.status==='paid' && relevant.every(a=>a.action==='refund' && a.type==='full' && a.status==='pending_approval')) {
-    try { await db.prepare("UPDATE billing_orders SET status='refund_pending' WHERE id=? AND status='paid'").bind(order.id).run();return true; } catch { /* Used credits need support review. */ }
+    try { await db.batch([
+      db.prepare('UPDATE billing_market SET refund_adjustment_id=? WHERE order_id=?').bind(relevant[0].id,order.id),
+      db.prepare("UPDATE billing_orders SET status='refund_pending' WHERE id=? AND status='paid'").bind(order.id)]);return true; } catch { /* Used credits need support review. */ }
   }
   if (order.status === 'refund_pending' && relevant.every(a => a.action === 'refund' && a.type === 'full' && a.status === 'pending_approval')) return true;
   await db.batch([db.prepare('UPDATE credit_lots SET frozen=1 WHERE source_key=?').bind(`order:${order.id}`),db.prepare("UPDATE billing_orders SET status='review' WHERE id=? AND status!='refunded'").bind(order.id)]);
@@ -112,7 +114,11 @@ export async function refundGlobalOrder(userId: string,id: string) {
   const transaction = await paddle<Transaction>(`/transactions/${order.transaction_id}?include=adjustments`); verifyGlobalPayment(transaction,order,true);
   if (await applyAdjustments({...order,status:'refund_pending'},transaction)) { const current = await readOrder(id,userId); if (current.status === 'refunded') return {status:'refunded'}; if(current.status==='paid')throw new PublicError(409,'REFUND_REJECTED','The refund request was declined. Credits are available again; contact support.'); throw new PublicError(409,'REFUND_PENDING','Refund verification is pending. Credits remain locked until confirmed.'); }
   const lock = await db.prepare('UPDATE billing_market SET refund_requested=1 WHERE order_id=? AND refund_requested=0').bind(id).run();
-  if (Number(lock.meta.changes) === 1) await paddle<Adjustment>('/adjustments','POST',{action:'refund',type:'full',transaction_id:order.transaction_id,reason:'Customer requested a full refund of unused BUYSOR credits'});
+  if (Number(lock.meta.changes) === 1) {
+    const adjustment=await paddle<Adjustment>('/adjustments','POST',{action:'refund',type:'full',transaction_id:order.transaction_id,reason:'Customer requested a full refund of unused BUYSOR credits'});
+    if(adjustment.transaction_id!==order.transaction_id || adjustment.action!=='refund' || adjustment.type!=='full' || !/^adj_[a-z\d]{26}$/.test(adjustment.id))throw invalid();
+    await db.prepare('UPDATE billing_market SET refund_adjustment_id=? WHERE order_id=?').bind(adjustment.id,id).run();
+  }
   // Approval is asynchronous. Never unfreeze on a timeout or resend an uncertain refund.
   throw new PublicError(409,'REFUND_PENDING','Refund requested. Check the same order later; credits remain locked.');
 }

@@ -104,3 +104,10 @@ test('verified rejected refund restores credits; external pending refunds lock t
  globalThis.fetch=async()=>respond({...transaction,adjustments:[adjustment]});await api.reconcileGlobalPayment(txn);assert.equal(db.prepare('SELECT status FROM billing_orders').get().status,'refund_pending');assert.equal((await store.wallet('owner')).available,0);
  db.prepare('UPDATE billing_market SET refund_requested=1').run();globalThis.fetch=async()=>respond({...transaction,adjustments:[{...adjustment,status:'rejected'}]});await api.reconcileGlobalPayment(txn);assert.equal((await store.wallet('owner')).available,20);assert.equal(db.prepare('SELECT COUNT(*) n FROM credit_lots').get().n,1);
 });
+
+test('an old rejected adjustment never releases an uncertain new refund',async()=>{
+ const {api,transaction,store,respond}=await fixture();globalThis.fetch=async()=>respond(transaction);await api.confirmGlobalOrder('owner',id,txn);
+ const old={id:'adj_'+'c'.repeat(26),transaction_id:txn,action:'refund',type:'full',status:'rejected',currency_code:'USD',totals:{total:'219'}};
+ globalThis.fetch=async(_url,options)=>{if(options.method==='POST')throw new DOMException('timeout','TimeoutError');return respond({...transaction,adjustments:[old]});};
+ await assert.rejects(()=>api.refundGlobalOrder('owner',id));await api.reconcileGlobalPayment(txn);assert.equal((await store.wallet('owner')).available,0);
+});

@@ -32,7 +32,7 @@ export function PreferencesPanel() {
           <legend>{ko ? "언어" : "Language"}</legend>
           <div className="segmented-setting">
             <button type="button" className={language === "ko" ? "selected" : ""} onClick={() => setLanguage("ko")} aria-pressed={language === "ko"}>
-              <Languages aria-hidden="true" size={18} /><span>한국어</span>{language === "ko" ? <Check aria-hidden="true" size={16} /> : null}
+              <Languages aria-hidden="true" size={18} /><span>{ko ? "한국어" : "Korean"}</span>{language === "ko" ? <Check aria-hidden="true" size={16} /> : null}
             </button>
             <button type="button" className={language === "en" ? "selected" : ""} onClick={() => setLanguage("en")} aria-pressed={language === "en"}>
               <Languages aria-hidden="true" size={18} /><span>English</span>{language === "en" ? <Check aria-hidden="true" size={16} /> : null}

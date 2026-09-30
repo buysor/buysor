@@ -52,7 +52,7 @@ export function SiteShell({ children, compact = false }: SiteShellProps) {
   return (
     <div className={`site-shell ${styles.shell}`}>
       <header className={`site-header ${styles.header}`}>
-        <Link className="brand" href="/" aria-label="BUYSOR 홈">
+        <Link className="brand" href="/" aria-label={ko ? "BUYSOR 홈" : "BUYSOR home"}>
           <span className="brand-mark">B</span>
           <span>BUYSOR</span>
         </Link>
@@ -108,7 +108,7 @@ export function SiteShell({ children, compact = false }: SiteShellProps) {
                 </div>
 
                 <div className={styles.menuSettings}>
-                  <button type="button" onClick={() => setLanguage(ko ? "en" : "ko")}><Languages size={16} /> {ko ? "English" : "한국어"}</button>
+                  <button type="button" onClick={() => setLanguage(ko ? "en" : "ko")}><Languages size={16} /> {ko ? "English" : "Korean"}</button>
                   <button type="button" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
                     {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
                     {theme === "light" ? (ko ? "다크 모드" : "Dark mode") : (ko ? "라이트 모드" : "Light mode")}

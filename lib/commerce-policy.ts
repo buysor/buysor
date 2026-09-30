@@ -14,7 +14,8 @@ export const FEATURES = {
 } as const;
 export type Feature = keyof typeof FEATURES;
 export const REWARDS = Object.freeze({ signup: 0, attendance: 0, roulette: 0 });
-export const formatKRW = (n: number) => `${n.toLocaleString('ko-KR')}원`;
+export const formatKRW = (n: number, language: 'ko' | 'en' = 'ko') =>
+  language === 'ko' ? `${n.toLocaleString('ko-KR')}원` : `KRW ${n.toLocaleString('en-US')}`;
 export function productById(id: string) { return CREDIT_PACKS.find(p => p.id === id); }
 /** CURRENT verified standard pricing, not a promise about future provider prices. */
 export const MODEL_RATES: Record<string, { input: number; output: number }> = {

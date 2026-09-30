@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
+import { getPageTitle } from "@/lib/ui-locale";
 
 export type ThemePreference = "light" | "dark";
 export type LanguagePreference = "ko" | "en";
@@ -17,6 +19,7 @@ const PreferencesContext = createContext<Preferences | null>(null);
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>("light");
   const [language, setLanguageState] = useState<LanguagePreference>("ko");
+  const pathname = usePathname();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("buysor-theme");
@@ -27,14 +30,15 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.documentElement.lang = language;
     document.documentElement.style.colorScheme = theme;
     localStorage.setItem("buysor-theme", theme);
   }, [theme]);
 
   useEffect(() => {
+    document.documentElement.lang = language;
+    document.title = getPageTitle(pathname, language);
     localStorage.setItem("buysor-language", language);
-  }, [language]);
+  }, [language, pathname]);
 
   const value = useMemo(
     () => ({ theme, language, setTheme: setThemeState, setLanguage: setLanguageState }),

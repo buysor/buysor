@@ -71,6 +71,7 @@ export function SiteShell({ children, compact = false }: SiteShellProps) {
             <button
               type="button"
               className={styles.menuButton}
+              aria-label={ko ? "메뉴" : "Menu"}
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               onClick={() => setMenuOpen((value) => !value)}

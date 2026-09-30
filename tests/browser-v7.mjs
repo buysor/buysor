@@ -13,7 +13,6 @@ try{
  for(const width of [1440,768,390]){
   const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1});
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('Browser error:',e.message);});
-  page.on('requestfailed',request=>console.error('Browser request failed:',request.url(),request.failure()?.errorText));
   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('#decision-example').waitFor();await page.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0));
   await waitForPreferences(page);
   const layout=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,images:[...document.images].map(i=>({src:i.currentSrc,ok:i.complete&&i.naturalWidth>0}))}));
@@ -103,6 +102,8 @@ try{
   await page.getByRole('button',{name:'Next',exact:true}).waitFor();
   await checkEnglish('reload keeps English');
   assert.deepEqual(pageErrors,[]);
+  await writeFile(`${evidence}/locale-results.json`,JSON.stringify(localeResults,null,2));
+  console.log(`English checks passed at ${width} pixels.`);
   await context.close();
  }
  await writeFile(`${evidence}/locale-results.json`,JSON.stringify(localeResults,null,2));

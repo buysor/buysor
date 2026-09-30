@@ -6,11 +6,16 @@ const evidence=process.env.EVIDENCE_DIR||'browser-evidence';
 await mkdir(evidence,{recursive:true});
 for(let i=0;i<90;i++){try{if((await fetch(origin)).ok)break;}catch{}if(i===89)throw Error('Server not ready');await new Promise(r=>setTimeout(r,1000));}
 const browser=await chromium.launch();const results=[];
+async function waitForPreferences(page,language='ko',theme='light'){
+ await page.waitForFunction(expected=>document.documentElement.lang===expected.language&&document.documentElement.dataset.theme===expected.theme,{language,theme},{timeout:90000});
+}
 try{
  for(const width of [1440,768,390]){
   const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1});
-  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const page=await context.newPage();const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('Browser error:',e.message);});
+  page.on('requestfailed',request=>console.error('Browser request failed:',request.url(),request.failure()?.errorText));
   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('#decision-example').waitFor();await page.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0));
+  await waitForPreferences(page);
   const layout=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,images:[...document.images].map(i=>({src:i.currentSrc,ok:i.complete&&i.naturalWidth>0}))}));
   assert.ok(layout.width<=width+2,JSON.stringify(layout));assert.ok(layout.height>2200);assert.ok(layout.images.every(i=>i.ok));
   await page.screenshot({path:`${evidence}/home-${width}.png`,fullPage:true});
@@ -20,10 +25,11 @@ try{
   assert.ok((await page.locator('main').innerText()).includes('1,900'));assert.equal(await page.locator('main button:disabled').count(),3);
   await page.screenshot({path:`${evidence}/credits-${width}.png`,fullPage:true});
   await page.goto(origin+'/pricing',{waitUntil:'domcontentloaded'});
+  await waitForPreferences(page);
   await page.getByRole('status').filter({hasText:'공개 준비 버전'}).waitFor({timeout:20000});
   assert.equal(await page.locator('main button:disabled').count(),1);assert.equal(await page.locator('main [class*="planCard"]').count(),1);
   await page.screenshot({path:`${evidence}/membership-${width}.png`,fullPage:true});
-  if(width===1440){await page.goto(origin,{waitUntil:'domcontentloaded'});await page.evaluate(()=>localStorage.setItem('buysor-theme','dark'));await page.reload({waitUntil:'domcontentloaded'});await page.screenshot({path:`${evidence}/home-dark.png`,fullPage:true});}
+  if(width===1440){await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForPreferences(page);await page.evaluate(()=>localStorage.setItem('buysor-theme','dark'));await page.reload({waitUntil:'domcontentloaded'});await waitForPreferences(page,'ko','dark');await page.screenshot({path:`${evidence}/home-dark.png`,fullPage:true});}
   assert.deepEqual(errors,[]);results.push({width,layout,status:'passed'});await context.close();
  }
  const response=await fetch(origin+'/api/commerce/status');assert.equal(response.status,200);const status=await response.json();

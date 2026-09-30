@@ -154,7 +154,7 @@ export async function getAdminAnalytics(rangeDays: number) {
       (SELECT COUNT(*) FROM decisions d WHERE d.user_id=u.id AND d.status='completed') decisions,
       COALESCE((SELECT SUM(amount) FROM billing_orders b WHERE b.user_id=u.id AND b.status='paid'),0) revenue,
       COALESCE((SELECT MAX(last_seen) FROM analytics_sessions s WHERE s.user_id=u.id),0) last_seen
-      FROM users u ORDER BY MAX(u.updated_at,last_seen) DESC LIMIT 40`).all<Record<string, unknown>>(),
+      FROM users u ORDER BY CASE WHEN last_seen>u.updated_at THEN last_seen ELSE u.updated_at END DESC LIMIT 40`).all<Record<string, unknown>>(),
   ]);
 
   const aiMicro = Number(aiToday?.micro || 0);

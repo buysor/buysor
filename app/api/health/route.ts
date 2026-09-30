@@ -12,6 +12,9 @@ const requiredTables = [
   "decisions",
   "subscriptions",
   "purchase_feedback",
+  "analytics_sessions",
+  "analytics_events",
+  "purchase_outcomes",
 ] as const;
 
 export async function GET() {

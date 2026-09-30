@@ -129,3 +129,54 @@ export const purchaseFeedback = sqliteTable(
     index("idx_purchase_feedback_user_created").on(table.userId, table.createdAt),
   ],
 );
+
+
+export const analyticsSessions = sqliteTable("analytics_sessions", {
+  sessionId: text("session_id").primaryKey(),
+  visitorId: text("visitor_id").notNull(),
+  userId: text("user_id"),
+  firstSeen: integer("first_seen").notNull(),
+  lastSeen: integer("last_seen").notNull(),
+  entryPath: text("entry_path").notNull(),
+  currentPath: text("current_path").notNull(),
+  referrerHost: text("referrer_host"),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  utmContent: text("utm_content"),
+  utmTerm: text("utm_term"),
+  device: text("device").notNull().default("unknown"),
+  language: text("language").notNull().default("ko"),
+  country: text("country"),
+  pageViews: integer("page_views").notNull().default(0),
+}, (table) => [
+  index("idx_analytics_sessions_last_seen").on(table.lastSeen),
+  index("idx_analytics_sessions_user").on(table.userId, table.lastSeen),
+]);
+
+export const analyticsEvents = sqliteTable("analytics_events", {
+  id: text("id").primaryKey(),
+  visitorId: text("visitor_id").notNull(),
+  sessionId: text("session_id").notNull(),
+  userId: text("user_id"),
+  name: text("name").notNull(),
+  path: text("path").notNull(),
+  propertiesJson: text("properties_json").notNull().default("{}"),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("idx_analytics_events_created").on(table.createdAt),
+  index("idx_analytics_events_name_created").on(table.name, table.createdAt),
+]);
+
+export const purchaseOutcomes = sqliteTable("purchase_outcomes", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  decisionId: text("decision_id").notNull().unique().references(() => decisions.id, { onDelete: "cascade" }),
+  status: text("status").notNull(),
+  purchasePrice: integer("purchase_price"),
+  satisfaction: integer("satisfaction"),
+  wouldChooseAgain: integer("would_choose_again"),
+  note: text("note"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});

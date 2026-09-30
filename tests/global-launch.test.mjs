@@ -90,6 +90,7 @@ test('operating revenue never sums cents with won, and outcomes retain each curr
  await analytics.ensureAnalyticsSchema();db.prepare("INSERT INTO decisions(id,user_id,status,updated_at,created_at) VALUES('d1','owner','completed',?,?)").run(Date.now(),Date.now());
  db.prepare("INSERT INTO purchase_outcomes VALUES('o1','owner','d1','bought',12345,5,NULL,NULL,?,?)").run(Date.now(),Date.now());db.prepare("INSERT INTO purchase_outcome_market VALUES('d1','GBP')").run();
  const data=await analytics.getAdminAnalytics(7);assert.equal(data.summary.revenueToday,199);assert.equal(data.summary.legacyRevenueToday,1900);assert.deepEqual(data.summary.recordedPurchaseValues.map(v=>({...v})),[{currency:'GBP',amount:12345}]);
+ const days=await analytics.getAdminTimeSeries(7);assert.equal(days.at(-1).revenue,199);assert.equal(days.at(-1).legacyRevenue,1900);assert.equal(days.at(-1).currency,'USD');
 });
 test('local check-ins work even when a legacy date key is occupied, without rewards',async()=>{
  const {attendance,db}=await fixture();const user={id:'owner',email:'owner@example.test'};const today=market.dateInZone(new Date(),'America/Los_Angeles');

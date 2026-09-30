@@ -73,6 +73,7 @@ try{
    if(path==='/credits')await page.getByText('Payment pending',{exact:false}).waitFor();
    if(path==='/profile?tab=state')assert.equal(await page.locator('textarea').inputValue(),originalProfile.stateText);
    await checkEnglish(path);
+   if(path==='/'||path==='/credits')await page.screenshot({path:`${evidence}/${path==='/'?'home':'credits'}-english-${width}.png`,fullPage:true});
   }
   await page.goto(origin+'/advisor',{waitUntil:'domcontentloaded'});
   await waitForPreferences(page,'en');

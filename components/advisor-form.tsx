@@ -17,7 +17,7 @@ import {
 import { usePreferences } from "@/components/preferences-provider";
 import type { DecisionAnswers, DecisionDraft, UserModelPayload } from "@/lib/buysor-types";
 import { trackEvent } from "@/lib/analytics-client";
-import { budgetOptions } from '@/lib/market';
+import { budgetOptions, budgetLabel } from '@/lib/market';
 import { MarketSelector } from '@/components/market-selector';
 
 const steps = [
@@ -217,7 +217,9 @@ export function AdvisorForm() {
         <small style={{ display: "block", margin: "-4px 0 18px", color: "var(--muted)", lineHeight: 1.6 }}>{ko ? current.help.ko : current.help.en}</small>
 
         <div className="option-grid">
-          {(current.id === 'budget' ? budgetOptions(currency, 'decision', language).map(row => ({ id: row.value, ko: row.label, en: row.label })) : current.options).map((option) => (
+          {(current.id === 'budget' ? [
+            ...(selected && !budgetOptions(currency,'decision',language).some(row=>row.value===selected) ? [{id:selected,ko:`${budgetLabel(selected,'ko')??current.options.find(row=>row.id===selected)?.ko??selected} (저장된 예산)`,en:`${budgetLabel(selected,'en')??current.options.find(row=>row.id===selected)?.en??selected} (saved budget)`}] : []),
+            ...budgetOptions(currency, 'decision', language).map(row => ({ id: row.value, ko: row.label, en: row.label }))] : current.options).map((option) => (
             <button
               className={selected === option.id ? "selected" : ""}
               key={option.id}

@@ -75,6 +75,7 @@ try{
    await checkEnglish(path);
   }
   await page.goto(origin+'/advisor',{waitUntil:'domcontentloaded'});
+  await waitForPreferences(page,'en');
   await page.getByRole('button',{name:'Work · study',exact:true}).click();
   await page.getByRole('button',{name:'Next',exact:true}).click();
   await page.getByRole('button',{name:'Under $200',exact:true}).waitFor();

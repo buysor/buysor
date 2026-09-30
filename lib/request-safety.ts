@@ -6,6 +6,11 @@ export function assertSameOrigin(request: Request) {
   if (!origin || origin !== new URL(request.url).origin) throw new PublicError(403, 'ORIGIN_REJECTED', '요청 출처를 확인할 수 없습니다.');
 }
 export async function boundedJson(request: Request, maxBytes = 32768): Promise<unknown> {
+  const raw = await boundedText(request, maxBytes);
+  try { return JSON.parse(raw); }
+  catch { throw new PublicError(400, 'INVALID_JSON', '입력 형식을 확인해 주세요.'); }
+}
+export async function boundedText(request: Request, maxBytes = 32768): Promise<string> {
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) throw new PublicError(415, 'JSON_REQUIRED', 'JSON 요청이 필요합니다.');
   const reader = request.body?.getReader();
   if (!reader) throw new PublicError(400, 'EMPTY_BODY', '입력이 없습니다.');
@@ -20,8 +25,7 @@ export async function boundedJson(request: Request, maxBytes = 32768): Promise<u
   } finally { reader.releaseLock(); }
   const bytes = new Uint8Array(length); let offset=0;
   for (const chunk of chunks) { bytes.set(chunk,offset); offset+=chunk.byteLength; }
-  try { return JSON.parse(new TextDecoder().decode(bytes)); }
-  catch { throw new PublicError(400, 'INVALID_JSON', '입력 형식을 확인해 주세요.'); }
+  return new TextDecoder().decode(bytes);
 }
 export function json(data: unknown, status=200) {
   return Response.json(data,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});

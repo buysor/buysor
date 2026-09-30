@@ -8,8 +8,8 @@ import { LocalizedText } from "@/components/preferences-provider";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "로그인",
-  description: "BUYSOR 계정에 로그인합니다.",
+  title: "Sign in",
+  description: "Sign in to your BUYSOR account with Google.",
 };
 
 export default async function LoginPage({
@@ -72,3 +72,4 @@ export default async function LoginPage({
     </SiteShell>
   );
 }
+

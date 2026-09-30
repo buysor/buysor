@@ -1,4 +1,5 @@
 import type { SurveyQuestion, SurveyStep } from "@/lib/user-model-survey";
+import { budgetLabel, budgetOptions, MARKETS, type Market } from "@/lib/market";
 
 type StepCopy = { title: string; description: string };
 type QuestionCopy = { label: string; help: string; options?: string[]; left?: string; right?: string };
@@ -91,10 +92,27 @@ export function getQuestionCopy(question: SurveyQuestion, language: "ko" | "en")
   const copy = QUESTION_EN[question.id];
   return { label: copy?.label ?? question.label, help: copy?.help ?? question.help, options: copy?.options ?? question.options ?? [], left: copy?.left ?? question.left ?? "", right: copy?.right ?? question.right ?? "" };
 }
-export function getOptionLabel(question: SurveyQuestion, option: string, language: "ko" | "en") {
+export function getOptionLabel(question: SurveyQuestion, option: string, language: "ko" | "en", market: Market = 'US') {
+  const budget = budgetLabel(option, language);
+  if (budget) return budget;
+  if (question.id === 'carDistance' && option.startsWith('distance:mi:')) {
+    const labels = language === 'ko' ? ['월 300마일 미만','300–600마일','600–1,200마일','1,200마일 이상','잘 모르겠음'] : ['Under 300 mi/month','300–600 mi/month','600–1,200 mi/month','1,200 mi+/month','Not sure'];
+    return labels[Number(option.split(':')[2])] ?? option;
+  }
   if (language === "ko") return option;
   const index = question.options?.indexOf(option) ?? -1;
   return index >= 0 ? (QUESTION_EN[question.id]?.options?.[index] ?? option) : option;
+}
+export function getSurveyOptions(question: SurveyQuestion, language: 'ko' | 'en', market: Market, answer?: unknown) {
+  let options = (question.options ?? []).map(value => ({ value, label: getOptionLabel(question, value, language, market) }));
+  if (question.id === 'budgetComfort' || question.id === 'budgetMax') options = budgetOptions(MARKETS[market].currency, question.id === 'budgetComfort' ? 'comfort' : 'max', language);
+  if (question.id === 'carDistance' && MARKETS[market].distance === 'mi') options = Array.from({length:5},(_,i)=>({value:`distance:mi:${i}`,label:getOptionLabel(question,`distance:mi:${i}`,language,market)}));
+  // Retain a saved answer in its original currency or units while offering the new region's choices.
+  if (typeof answer === 'string' && !options.some(row=>row.value===answer)) {
+    const label=getOptionLabel(question,answer,language,market);
+    options.unshift({value:answer,label:`${label} (${language==='ko'?'저장된 답변':'saved answer'})`});
+  }
+  return options;
 }
 export function hasCompleteEnglishSurveyCopy(question: SurveyQuestion) {
   const copy = QUESTION_EN[question.id];

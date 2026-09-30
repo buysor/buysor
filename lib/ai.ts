@@ -1,6 +1,7 @@
 import {costMicroUSD, FEATURES, type Feature} from './commerce-policy';
 import {runtimeConfig} from './commerce-runtime';
 import {PublicError} from './request-safety';
+import { MARKETS, budgetLabel, type Market } from './market';
 import type {
   DecisionAnswers,
   DecisionDraft,
@@ -149,6 +150,7 @@ export async function generateDecision(input: {
   userModel: UserModelPayload | null;
   feature?: Feature;
   language?: "ko" | "en";
+  market?: Market;
   reserveMicro: number;
   onUsage: (usage:{micro:number;input:number;output:number;providerId:string})=>Promise<void>;
 }): Promise<DecisionResult> {
@@ -163,14 +165,19 @@ export async function generateDecision(input: {
     },
     answers: input.answers,
     userModel: input.userModel,
-    language: input.language ?? "ko",
+    language: input.language ?? "en",
+    shoppingRegion: MARKETS[input.market ?? 'US'].name,
+    productCurrency: MARKETS[input.market ?? 'US'].currency,
+    budgetMeaning: budgetLabel(input.answers.budget ?? '', 'en') ?? 'Legacy budget IDs are Korean won: under-300 = under KRW 300,000; 300-500 = KRW 300,000–500,000; 500-1000 = KRW 500,000–1,000,000; 1000-2000 = KRW 1,000,000–2,000,000; 2000-4000 = KRW 2,000,000–4,000,000. Confirm any other legacy ID before using it.',
+    surveyBudgetMeaning: input.userModel ? Object.fromEntries(['budgetComfort','budgetMax'].map(key=>[key,budgetLabel(String(input.userModel!.survey[key] ?? ''),'en') ?? 'A legacy Korean budget answer, when present, is in KRW.'])) : null,
   };
 
   const response = await callJson<DecisionResult>({
     schemaName: "buysor_decision",
     schema: decisionSchema,
     system: BUYSOR_SYSTEM,
-    user: `${input.language === "en" ? "Create the purchase decision in English." : "구매 판단은 한국어로 작성하세요."}
+    user: `${input.language !== "ko" ? "Create the purchase decision in English." : "구매 판단은 한국어로 작성하세요."}
+Use the selected shopping region for local model availability, taxes or VAT, delivery and returns, manufacturer warranty, refurbished or used conditions, resale evidence, voltage and plug compatibility, wireless bands and units. Do not assume South Korean retailers, won pricing, 220V or Korean service coverage unless the selected region or the user asks for them. Language does not change the shopping region. A saved distance:mi:index answer uses monthly miles: 0=under 300; 1=300–600; 2=600–1,200; 3=1,200+; 4=not sure. Other existing km answers remain kilometers. Never invent local availability or a tax or legal guarantee. A source from another region must be clearly identified.
 Use web search for current product and market facts when needed. Distinguish verified facts from inference. Do not claim an exact current price unless the search evidence supports it.
 
 ${JSON.stringify(payload, null, 2)}`,

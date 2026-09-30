@@ -74,6 +74,10 @@ export default function Home() {
           </div>
 
           <div className={`${styles.heroVisual} ${showroom.frame}`} aria-hidden="true">
+            <picture className={showroom.darkArt}>
+              <source type="image/avif" srcSet="/buysor-studio-dark-20260930.avif" width={1536} height={1024} />
+              <img src="/buysor-studio-dark-20260930.webp" alt="" width={1536} height={1024} loading="eager" decoding="async" />
+            </picture>
             <picture>
               <source
                 type="image/avif"

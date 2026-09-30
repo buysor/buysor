@@ -7,7 +7,7 @@ import { SiteShell } from "@/components/site-shell";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "내 바이저",
+  title: "My BUYSOR",
 };
 
 export default async function MyBuysorPage() {
@@ -28,3 +28,4 @@ export default async function MyBuysorPage() {
     </SiteShell>
   );
 }
+

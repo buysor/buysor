@@ -6,7 +6,7 @@ import { SiteShell } from "@/components/site-shell";
 
 export const metadata: Metadata = {
   title: "BUYSOR Lens",
-  description: "사진과 스크린샷에서 구매 판단에 필요한 제품 단서를 찾습니다.",
+  description: "Start a purchase decision from a photo, screenshot, product link or model name.",
 };
 
 export default function LensPage() {
@@ -28,3 +28,4 @@ export default function LensPage() {
     </SiteShell>
   );
 }
+

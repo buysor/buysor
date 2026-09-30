@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AuthControl } from "@/components/auth-control";
 import { usePreferences } from "@/components/preferences-provider";
+import { MarketSelector } from "@/components/market-selector";
 import styles from "./site-shell.module.css";
 
 type SiteShellProps = {
@@ -109,6 +110,7 @@ export function SiteShell({ children, compact = false }: SiteShellProps) {
                 </div>
 
                 <div className={styles.menuSettings}>
+                  <div style={{gridColumn:'1 / -1'}}><MarketSelector compact /></div>
                   <button type="button" onClick={() => setLanguage(ko ? "en" : "ko")}><Languages size={16} /> {ko ? "English" : "Korean"}</button>
                   <button type="button" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
                     {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}

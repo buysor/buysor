@@ -19,7 +19,7 @@ const schema = z.object({
   utmCampaign:z.string().trim().max(160).nullable().optional(), utmContent:z.string().trim().max(160).nullable().optional(),
   utmTerm:z.string().trim().max(160).nullable().optional(),
   device:z.enum(["desktop","mobile","tablet","unknown"]).default("unknown"),
-  language:z.string().trim().max(12).default("ko"),
+  language:z.string().trim().max(12).default("en"),
   properties:z.record(z.union([z.string().max(500),z.number().finite(),z.boolean(),z.null()])).default({}),
 }).strict();
 
@@ -51,3 +51,4 @@ function readCountry(request:Request) {
   const country=(request as Request & {cf?:{country?:string}}).cf?.country?.toUpperCase();
   return country && /^[A-Z]{2}$/.test(country) ? country : null;
 }
+

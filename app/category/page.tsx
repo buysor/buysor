@@ -6,8 +6,8 @@ import { LocalizedText } from "@/components/preferences-provider";
 import { SiteShell } from "@/components/site-shell";
 
 export const metadata: Metadata = {
-  title: "카테고리로 찾기",
-  description: "제품 사진 없이 카테고리부터 선택해 구매 판단을 시작합니다.",
+  title: "Browse categories",
+  description: "Browse electronics, appliances and power tools to start a purchase decision.",
 };
 
 export default function CategoryPage() {
@@ -30,3 +30,4 @@ export default function CategoryPage() {
     </SiteShell>
   );
 }
+

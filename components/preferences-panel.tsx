@@ -2,6 +2,7 @@
 
 import { Check, Languages, Moon, Settings2, Sun } from "lucide-react";
 import { usePreferences } from "@/components/preferences-provider";
+import { MarketSelector } from "@/components/market-selector";
 
 export function PreferencesPanel() {
   const { language, setLanguage, theme, setTheme } = usePreferences();
@@ -16,6 +17,7 @@ export function PreferencesPanel() {
       </div>
 
       <div className="preference-groups">
+        <fieldset className="preference-group"><legend>{ko ? '구매 지역' : 'Shopping region'}</legend><MarketSelector /></fieldset>
         <fieldset className="preference-group">
           <legend>{ko ? "화면" : "Appearance"}</legend>
           <div className="segmented-setting">

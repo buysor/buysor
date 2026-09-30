@@ -12,7 +12,7 @@ const draftSchema=z.object({type:z.enum(['photo','link','name','category']),valu
  imageDataUrl:z.string().max(1500000).optional(),imageName:z.string().max(150).optional(),categoryId:z.string().max(120).nullable().optional(),subcategoryId:z.string().max(120).nullable().optional(),createdAt:z.number().finite()});
 const answersSchema=z.object({purpose:text.optional(),budget:text.optional(),current:text.optional(),condition:text.optional(),timing:text.optional(),note:text.optional()});
 const schema=z.object({requestKey:z.string().uuid(),policyVersion:z.literal(POLICY_VERSION),acceptedCredits:z.number().int(),
- feature:z.enum(['standard','deep','rejudge']).default('standard'),language:z.enum(['ko','en']).default('ko'),draft:draftSchema,answers:answersSchema.default({}),parentId:z.string().uuid().optional()}).strict();
+ feature:z.enum(['standard','deep','rejudge']).default('standard'),language:z.enum(['ko','en']).default('en'),market:z.enum(['US','GB','CA','AU','NZ','KR']).optional(),draft:draftSchema,answers:answersSchema.default({}),parentId:z.string().uuid().optional()}).strict();
 export async function GET(request:Request){try{
  const user=await getChatGPTUser();if(!user)return json({error:'로그인이 필요합니다.'},401);
  const n=Number(new URL(request.url).searchParams.get('limit')??20);
@@ -58,7 +58,7 @@ export async function POST(request:Request){
   if(!reserved.fresh)throw new PublicError(409,'ALREADY_REQUESTED','이미 접수된 요청입니다.');
   runId=reserved.run.id;
   decisionId=await createPendingDecision(user,draft,body.answers);
-  const result=await generateDecision({draft,answers:body.answers,userModel:await getUserProfile(user),feature,language:body.language,
+  const result=await generateDecision({draft,answers:body.answers,userModel:await getUserProfile(user),feature,language:body.language,market:body.market,
     reserveMicro:budget.reserveMicro,onUsage:usage=>recordUsage(runId!,user.id,usage)});
   if(!result.headline||result.reasons.length<2)throw new PublicError(502,'INVALID_RESULT','판단 결과가 불완전합니다.');
   await completeRun(runId!,user.id,result,decisionId);

@@ -31,7 +31,7 @@ type Auth = { authenticated: boolean; email?: string };
 type Phase = "loading" | "ready" | "signin" | "missing-ai" | "running" | "result" | "error";
 
 export function DecisionRunner() {
-  const {language}=usePreferences();
+  const {language,market}=usePreferences();
   const ko=language==="ko";
   const {data:commerce,error:commerceError}=useCommerce();
   const [consent,setConsent]=useState(false);
@@ -115,7 +115,7 @@ export function DecisionRunner() {
       const response = await fetch("/api/decision", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ draft, answers,language,requestKey:requestKey.current,policyVersion:POLICY_VERSION,acceptedCredits:FEATURES.standard.credits,feature:"standard" }),
+        body: JSON.stringify({ draft, answers,language,market,requestKey:requestKey.current,policyVersion:POLICY_VERSION,acceptedCredits:FEATURES.standard.credits,feature:"standard" }),
       });
       const payload = await response.json() as { id?:string; error?: string; code?:string;requestState?:string; result?: DecisionResult };
       if (response.status === 401) {

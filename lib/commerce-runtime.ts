@@ -2,7 +2,7 @@ import { MODEL_RATES, FEATURES, type Feature } from './commerce-policy';
 import { PublicError } from './request-safety';
 export function runtimeConfig() {
  const fx=Number(process.env.AI_FX_KRW_PER_USD || '1600');
- const daily=Number(process.env.AI_DAILY_BUDGET_KRW || '0');
+ const daily=process.env.AI_DAILY_BUDGET_USD!==undefined ? Number(process.env.AI_DAILY_BUDGET_USD)*fx : Number(process.env.AI_DAILY_BUDGET_KRW || '0');
  const model=process.env.AI_MODEL?.trim() || 'gpt-5.6-terra';
  const configured=process.env.AI_SPEND_ENABLED==='1' && process.env.AI_PROVIDER==='openai'
    && Boolean(process.env.OPENAI_API_KEY) && Boolean(MODEL_RATES[model])
@@ -18,8 +18,10 @@ export function quote(feature:Feature) {
 // Live merchant activation is deliberately separate from deployment.
 export function checkoutReady() {
  return process.env.BUYSOR_PAID_RELEASE==='1' && process.env.BUYSOR_COMMERCE_REVIEWED==='1'
-  && Boolean(process.env.TOSS_SECRET_KEY?.startsWith('live_sk_'))
-  && Boolean(process.env.TOSS_MERCHANT_ID) && (process.env.TOSS_WEBHOOK_SECRET?.length??0)>=32
+  && process.env.BUYSOR_PAYMENT_PROVIDER==='paddle' && process.env.PADDLE_ENV==='live'
+  && Boolean(process.env.PADDLE_API_KEY?.startsWith('pdl_live_apikey_'))
+  && Boolean(process.env.PADDLE_CLIENT_TOKEN?.startsWith('live_')) && (process.env.PADDLE_WEBHOOK_SECRET?.length??0)>=32
+  && ['PACK20','PACK100','PACK300'].every(id=>/^pri_[a-z\d]{26}$/.test(process.env[`PADDLE_PRICE_${id}`]||''))
   && Boolean(process.env.PUBLIC_ORIGIN?.startsWith('https://')) && runtimeConfig().configured;
 }
 export function requireCheckout() {

@@ -209,3 +209,112 @@ function safeFx() {
 }
 function round1(value:number){return Math.round(value*10)/10;}
 function safeJson(value:string){try{return JSON.parse(value) as Record<string,unknown>;}catch{return {};}}
+
+
+export async function getAdminTimeSeries(days:number) {
+  const db=await ensureAnalyticsSchema();
+  const safeDays=[1,7,30,90].includes(days)?days:7;
+  const start=Date.now()-safeDays*86_400_000;
+  const [traffic,decisions,revenue,ai] = await Promise.all([
+    db.prepare(`SELECT date(created_at/1000,'unixepoch','+9 hours') day,
+      COUNT(DISTINCT visitor_id) visitors,COUNT(DISTINCT session_id) sessions
+      FROM analytics_events WHERE name='page_view' AND created_at>=? GROUP BY day ORDER BY day`).bind(start).all<Record<string,unknown>>(),
+    db.prepare(`SELECT date(updated_at/1000,'unixepoch','+9 hours') day,COUNT(*) decisions
+      FROM decisions WHERE status='completed' AND updated_at>=? GROUP BY day ORDER BY day`).bind(start).all<Record<string,unknown>>(),
+    db.prepare(`SELECT date(paid_at/1000,'unixepoch','+9 hours') day,COUNT(*) orders,COALESCE(SUM(amount),0) revenue
+      FROM billing_orders WHERE status='paid' AND paid_at>=? GROUP BY day ORDER BY day`).bind(start).all<Record<string,unknown>>(),
+    db.prepare(`SELECT date(updated_at/1000,'unixepoch','+9 hours') day,COALESCE(SUM(actual_micro),0) micro
+      FROM credit_runs WHERE state='completed' AND updated_at>=? GROUP BY day ORDER BY day`).bind(start).all<Record<string,unknown>>(),
+  ]);
+  const byDay=new Map<string,{day:string;visitors:number;sessions:number;decisions:number;orders:number;revenue:number;aiCost:number}>();
+  const ensure=(day:string)=>{let row=byDay.get(day);if(!row){row={day,visitors:0,sessions:0,decisions:0,orders:0,revenue:0,aiCost:0};byDay.set(day,row);}return row;};
+  for(const row of traffic.results??[]){const x=ensure(String(row.day));x.visitors=Number(row.visitors||0);x.sessions=Number(row.sessions||0);}
+  for(const row of decisions.results??[]){ensure(String(row.day)).decisions=Number(row.decisions||0);}
+  for(const row of revenue.results??[]){const x=ensure(String(row.day));x.orders=Number(row.orders||0);x.revenue=Number(row.revenue||0);}
+  const fx=safeFx();
+  for(const row of ai.results??[]){ensure(String(row.day)).aiCost=Math.round(Number(row.micro||0)/1_000_000*fx);}
+  return [...byDay.values()].sort((a,b)=>a.day.localeCompare(b.day)).map((row)=>({...row,contribution:row.revenue-row.aiCost}));
+}
+
+export async function getAdminSegmentAnalytics(input:{
+  days:number;source?:string|null;device?:string|null;country?:string|null;language?:string|null;
+}) {
+  const db=await ensureAnalyticsSchema();
+  const days=[1,7,30,90].includes(input.days)?input.days:7;
+  const start=Date.now()-days*86_400_000;
+  const clauses=["first_seen>=?"];const values:unknown[]=[start];
+  if(input.source){clauses.push("(LOWER(COALESCE(utm_source,''))=LOWER(?) OR LOWER(COALESCE(referrer_host,''))=LOWER(?))");values.push(input.source,input.source);}
+  if(input.device){clauses.push("device=?");values.push(input.device);}
+  if(input.country){clauses.push("country=?");values.push(input.country.toUpperCase());}
+  if(input.language){clauses.push("LOWER(language) LIKE LOWER(?)");values.push(input.language+"%");}
+  const where=clauses.join(" AND ");
+  const sessionSql=`SELECT session_id,visitor_id,user_id FROM analytics_sessions WHERE ${where}`;
+  const [audience,funnel,commercial] = await Promise.all([
+    db.prepare(`SELECT COUNT(*) sessions,COUNT(DISTINCT visitor_id) visitors,COUNT(DISTINCT user_id) knownUsers FROM (${sessionSql})`).bind(...values).first<Record<string,number>>(),
+    db.prepare(`WITH matched AS (${sessionSql})
+      SELECT
+       COUNT(DISTINCT CASE WHEN e.name='page_view' THEN e.session_id END) visits,
+       COUNT(DISTINCT CASE WHEN e.name='lens_input' THEN e.session_id END) lens,
+       COUNT(DISTINCT CASE WHEN e.name='advisor_completed' THEN e.session_id END) advisor,
+       COUNT(DISTINCT CASE WHEN e.name='decision_started' THEN e.session_id END) started,
+       COUNT(DISTINCT CASE WHEN e.name='decision_completed' THEN e.session_id END) completed,
+       COUNT(DISTINCT CASE WHEN e.name='checkout_started' THEN e.session_id END) checkout
+      FROM analytics_events e JOIN matched m ON m.session_id=e.session_id WHERE e.created_at>=?`).bind(...values,start).first<Record<string,number>>(),
+    db.prepare(`WITH matched AS (${sessionSql}), userset AS (SELECT DISTINCT user_id FROM matched WHERE user_id IS NOT NULL)
+      SELECT
+       (SELECT COUNT(*) FROM decisions d JOIN userset u ON u.user_id=d.user_id WHERE d.status='completed' AND d.updated_at>=?) decisions,
+       (SELECT COUNT(*) FROM billing_orders b JOIN userset u ON u.user_id=b.user_id WHERE b.status='paid' AND b.paid_at>=?) paidOrders,
+       (SELECT COALESCE(SUM(amount),0) FROM billing_orders b JOIN userset u ON u.user_id=b.user_id WHERE b.status='paid' AND b.paid_at>=?) revenue
+    `).bind(...values,start,start,start).first<Record<string,number>>(),
+  ]);
+  const visits=Number(funnel?.visits||0),completed=Number(funnel?.completed||0),checkout=Number(funnel?.checkout||0);
+  return {
+    rangeDays:days,
+    filter:{source:input.source??null,device:input.device??null,country:input.country??null,language:input.language??null},
+    audience:{sessions:Number(audience?.sessions||0),visitors:Number(audience?.visitors||0),knownUsers:Number(audience?.knownUsers||0)},
+    funnel:{visits,lens:Number(funnel?.lens||0),advisor:Number(funnel?.advisor||0),started:Number(funnel?.started||0),completed,checkout},
+    rates:{visitToDecisionPct:visits?round1(completed/visits*100):0,visitToCheckoutPct:visits?round1(checkout/visits*100):0},
+    commercial:{decisions:Number(commercial?.decisions||0),paidOrders:Number(commercial?.paidOrders||0),revenue:Number(commercial?.revenue||0)},
+  };
+}
+
+export async function findAdminUsers(query:string,limit:number) {
+  const db=await ensureAnalyticsSchema();
+  const safeLimit=Math.max(1,Math.min(50,Math.trunc(limit||20)));
+  const like=`%${query.trim().toLowerCase().slice(0,120)}%`;
+  const rows=await db.prepare(`SELECT u.id,u.email,u.display_name,u.created_at,u.updated_at,
+    COALESCE((SELECT completion FROM user_profiles p WHERE p.user_id=u.id),0) completion,
+    COALESCE((SELECT MAX(last_seen) FROM analytics_sessions s WHERE s.user_id=u.id),0) last_seen,
+    (SELECT COUNT(*) FROM decisions d WHERE d.user_id=u.id AND d.status='completed') decisions,
+    COALESCE((SELECT SUM(amount) FROM billing_orders b WHERE b.user_id=u.id AND b.status='paid'),0) revenue
+    FROM users u WHERE LOWER(u.email) LIKE ? OR LOWER(u.display_name) LIKE ?
+    ORDER BY CASE WHEN COALESCE((SELECT MAX(last_seen) FROM analytics_sessions s2 WHERE s2.user_id=u.id),0)>u.updated_at
+      THEN COALESCE((SELECT MAX(last_seen) FROM analytics_sessions s3 WHERE s3.user_id=u.id),0) ELSE u.updated_at END DESC LIMIT ?`)
+    .bind(like,like,safeLimit).all<Record<string,unknown>>();
+  return (rows.results??[]).map(row=>({
+    id:String(row.id||""),email:String(row.email||""),displayName:String(row.display_name||""),
+    createdAt:Number(row.created_at||0),lastSeen:Number(row.last_seen||0),completion:Number(row.completion||0),
+    decisions:Number(row.decisions||0),revenue:Number(row.revenue||0),
+  }));
+}
+
+export async function getAdminUserJourney(email:string,limit:number) {
+  const db=await ensureAnalyticsSchema();
+  const safeLimit=Math.max(5,Math.min(100,Math.trunc(limit||40)));
+  const user=await db.prepare(`SELECT id,email,display_name,created_at,updated_at FROM users WHERE LOWER(email)=LOWER(?) LIMIT 1`).bind(email.trim()).first<Record<string,unknown>>();
+  if(!user)return null;
+  const userId=String(user.id);
+  const [profile,events,decisions,orders,feedback,outcomes]=await Promise.all([
+    db.prepare(`SELECT completion,updated_at FROM user_profiles WHERE user_id=?`).bind(userId).first<Record<string,unknown>>(),
+    db.prepare(`SELECT name,path,properties_json,created_at FROM analytics_events WHERE user_id=? ORDER BY created_at DESC LIMIT ?`).bind(userId,safeLimit).all<Record<string,unknown>>(),
+    db.prepare(`SELECT id,input_type,input_label,verdict,status,created_at,updated_at FROM decisions WHERE user_id=? ORDER BY created_at DESC LIMIT ?`).bind(userId,safeLimit).all<Record<string,unknown>>(),
+    db.prepare(`SELECT id,product_id,amount,credits,status,created_at,paid_at FROM billing_orders WHERE user_id=? ORDER BY created_at DESC LIMIT ?`).bind(userId,safeLimit).all<Record<string,unknown>>(),
+    db.prepare(`SELECT decision_id,stage,rating,would_choose_again,note,created_at FROM purchase_feedback WHERE user_id=? ORDER BY created_at DESC LIMIT ?`).bind(userId,safeLimit).all<Record<string,unknown>>(),
+    db.prepare(`SELECT decision_id,status,purchase_price,satisfaction,would_choose_again,note,updated_at FROM purchase_outcomes WHERE user_id=? ORDER BY updated_at DESC LIMIT ?`).bind(userId,safeLimit).all<Record<string,unknown>>(),
+  ]);
+  return {
+    user:{id:userId,email:String(user.email||""),displayName:String(user.display_name||""),createdAt:Number(user.created_at||0),updatedAt:Number(user.updated_at||0),profileCompletion:Number(profile?.completion||0)},
+    events:(events.results??[]).map(row=>({name:String(row.name||""),path:String(row.path||""),createdAt:Number(row.created_at||0),properties:safeJson(String(row.properties_json||"{}"))})),
+    decisions:decisions.results??[],orders:orders.results??[],feedback:feedback.results??[],outcomes:outcomes.results??[],
+  };
+}

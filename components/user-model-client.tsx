@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePreferences } from "@/components/preferences-provider";
 import { getOptionLabel, getQuestionCopy, getStepCopy } from "@/lib/user-model-locale";
+import { trackEvent } from "@/lib/analytics-client";
 import {
   CheckCircle2,
   ChevronLeft,
@@ -302,7 +303,8 @@ export function UserModelClient() {
   async function saveRawState() {
     const next = { ...profile, stateText: text.trim(), structuredState, completion: overallCompletion };
     setProfile(next);
-    await persistProfile(next);
+    const saved = await persistProfile(next);
+    if (saved) trackEvent("profile_saved",{mode:"state",completion:next.completion});
   }
 
   async function analyzeState() {
@@ -355,7 +357,8 @@ export function UserModelClient() {
       return;
     }
 
-    await persistProfile(next);
+    const saved = await persistProfile(next);
+    if (saved) trackEvent("profile_saved",{mode:"survey",completion:next.completion,answered:answeredCount});
   }
 
   const traits = useMemo(() => {

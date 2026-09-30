@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CREDIT_PACKS, POLICY_VERSION, formatKRW } from '@/lib/commerce-policy';
 import s from './commerce.module.css';
 import {usePreferences} from '@/components/preferences-provider';
+import {trackEvent} from '@/lib/analytics-client';
 type Status={authenticated:boolean;checkoutReady:boolean;subscriptionReady:boolean;aiReady:boolean;balance:{available:number}|null};
 export function useCommerce(){
  const [data,setData]=useState<Status|null>(null);const [error,setError]=useState('');
@@ -17,7 +18,8 @@ export function CheckoutButton({productId}:{productId:string}){
  const product=CREDIT_PACKS.find(p=>p.id===productId);if(!product)return null;
  async function start(){
   if(!product||lock.current||!consent||!data?.checkoutReady)return;
-  if(!data.authenticated){location.assign('/login?return_to=%2Fcredits');return;}
+  if(!data.authenticated){trackEvent('checkout_started',{productId,authenticated:false,price:product.price});location.assign('/login?return_to=%2Fcredits');return;}
+  trackEvent('checkout_started',{productId,authenticated:true,price:product.price});
   lock.current=true;setBusy(true);setMessage('');
   try{const r=await fetch('/api/billing/order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({productId,acceptedPrice:product.price,policyVersion:POLICY_VERSION,consent:true})});const b=await r.json();if(!r.ok||!b.url)throw Error(b.error||(ko?'결제창을 열지 못했습니다.':'Could not open checkout.'));location.assign(b.url);}
   catch(e){setMessage(e instanceof Error?e.message:(ko?'잠시 후 다시 시도해 주세요.':'Please try again shortly.'));lock.current=false;setBusy(false);}
@@ -38,7 +40,7 @@ export function BillingReturn({failed=false}:{failed?:boolean}){
  useEffect(()=>{if(failed)return;const p=new URLSearchParams(location.search);const orderId=p.get('orderId'),paymentKey=p.get('paymentKey'),amount=Number(p.get('amount'));
  if(!orderId||!paymentKey||!Number.isSafeInteger(amount)||amount<=0){setState(ko?'주문 정보가 없습니다. 결제 내역을 확인해 주세요.':'Order information is missing. Check billing history.');return;}
  let active=true;setCanRetry(false);
- fetch('/api/billing/confirm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orderId,paymentKey,amount})}).then(async r=>{const b=await r.json();if(!r.ok)throw Error(b.error||(ko?'결제 확인 실패':'Payment verification failed'));if(active){setState(ko?`결제 확인 완료. ${b.credits}C가 지급되었습니다.`:`Payment verified. ${b.credits}C was added.`);history.replaceState(null,'',location.pathname);}}).catch(e=>{if(active){setState(e.message);setCanRetry(true);}});return()=>{active=false;};},[failed,retry]);
+ fetch('/api/billing/confirm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({orderId,paymentKey,amount})}).then(async r=>{const b=await r.json();if(!r.ok)throw Error(b.error||(ko?'결제 확인 실패':'Payment verification failed'));if(active){setState(ko?`결제 확인 완료. ${b.credits}C가 지급되었습니다.`:`Payment verified. ${b.credits}C was added.`);trackEvent('checkout_completed',{credits:Number(b.credits||0),amount});history.replaceState(null,'',location.pathname);}}).catch(e=>{if(active){setState(e.message);setCanRetry(true);}});return()=>{active=false;};},[failed,retry]);
  return <section className={s.return}><h1>{ko?'결제 확인':'Payment verification'}</h1><p role="status">{state}</p>{canRetry?<button onClick={()=>setRetry(v=>v+1)}>{ko?'같은 주문 다시 확인':'Retry same order'}</button>:null}<a href="/credits">{ko?'잔액과 내역 확인':'Check balance & history'}</a><a href="/support">{ko?'고객지원':'Support'}</a></section>;
 }
 type Order={id:string;product_id:string;amount:number;credits:number;status:string;created_at:number};

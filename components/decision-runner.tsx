@@ -21,6 +21,8 @@ import type { DecisionAnswers, DecisionDraft, DecisionResult } from "@/lib/buyso
 import {useCommerce} from "./commerce-client";
 import {usePreferences} from "@/components/preferences-provider";
 import {FEATURES,POLICY_VERSION} from "@/lib/commerce-policy";
+import {trackEvent} from "@/lib/analytics-client";
+import {DecisionFeedback} from "@/components/decision-feedback";
 import styles from "./decision-result.module.css";
 
 type Runtime = { configured: boolean; provider: string | null; model: string | null };
@@ -40,6 +42,7 @@ export function DecisionRunner() {
   const [auth, setAuth] = useState<Auth>({ authenticated: false });
   const [phase, setPhase] = useState<Phase>("loading");
   const [result, setResult] = useState<DecisionResult | null>(null);
+  const [decisionId,setDecisionId]=useState<string|null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -106,13 +109,14 @@ export function DecisionRunner() {
     requestKey.current ??= crypto.randomUUID();
     setPhase("running");
     setError("");
+    trackEvent("decision_started",{inputType:draft.type,credits:FEATURES.standard.credits});
     try {
       const response = await fetch("/api/decision", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ draft, answers,language,requestKey:requestKey.current,policyVersion:POLICY_VERSION,acceptedCredits:FEATURES.standard.credits,feature:"standard" }),
       });
-      const payload = await response.json() as { error?: string; code?:string;requestState?:string; result?: DecisionResult };
+      const payload = await response.json() as { id?:string; error?: string; code?:string;requestState?:string; result?: DecisionResult };
       if (response.status === 401) {
         setPhase("signin");
         return;
@@ -123,9 +127,12 @@ export function DecisionRunner() {
       }
       if (!response.ok || !payload.result) { if(payload.requestState==="failed"||payload.code==="REQUEST_FAILED")requestKey.current=null;throw new Error(payload.error || (ko?"구매 판단 생성에 실패했습니다.":"Could not create the purchase decision."));}
       setResult(payload.result);
+      setDecisionId(payload.id??null);
+      trackEvent("decision_completed",{verdict:payload.result.verdict,inputType:draft.type,evidenceSources:payload.result.evidenceSources?.length??0});
       setPhase("result");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : (ko?"구매 판단 생성에 실패했습니다.":"Could not create the purchase decision."));
+      trackEvent("decision_failed",{inputType:draft?.type??"unknown"});
       setPhase("error");
     } finally {inFlight.current=false;}
   }
@@ -181,7 +188,7 @@ export function DecisionRunner() {
         />
       ) : null}
 
-      {phase === "result" && result ? <DecisionView result={result} ko={ko}/> : null}
+      {phase === "result" && result ? <DecisionView result={result} ko={ko} decisionId={decisionId}/> : null}
     </div>
   );
 }
@@ -214,7 +221,7 @@ function Gate({ icon, title, body, actions }: { icon: React.ReactNode; title: st
   );
 }
 
-function DecisionView({ result, ko }: { result: DecisionResult; ko: boolean }) {
+function DecisionView({ result, ko, decisionId }: { result: DecisionResult; ko: boolean; decisionId:string|null }) {
   return (
     <section className={styles.resultCard}>
       <div className={styles.verdict}>
@@ -255,6 +262,7 @@ function DecisionView({ result, ko }: { result: DecisionResult; ko: boolean }) {
         </div>
 
         {result.evidenceSources?.length ? <article className={styles.section}><div className={styles.sectionHead}><Search size={14}/>{ko?"웹 근거":"Web evidence"}</div><ul className={styles.list}>{result.evidenceSources.map((source)=><li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a></li>)}</ul></article> : null}
+        {decisionId ? <DecisionFeedback decisionId={decisionId} ko={ko}/> : null}
         <div className={styles.footer}><span>{ko?"판단 결과는 계정 기록에 저장됩니다.":"The decision is saved to your account history."}</span><a className={styles.secondary} href="/my">{ko?"내 바이저에서 기록 보기":"View history"}</a></div>
       </div>
     </section>

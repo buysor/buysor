@@ -5,6 +5,7 @@ import { usePreferences } from "@/components/preferences-provider";
 import { CategorySelector, type CategorySelection } from "@/components/category-selector";
 import { findCategory } from "@/lib/categories";
 import type { DecisionDraft } from "@/lib/buysor-types";
+import { trackEvent } from "@/lib/analytics-client";
 import {
   ArrowRight,
   Camera,
@@ -153,6 +154,7 @@ export function DecisionStudio({
       setInputError(ko ? "브라우저 저장 공간이 부족합니다. 이미지 크기를 줄여 다시 시도해 주세요." : "Browser storage is full. Try a smaller image.");
       return;
     }
+    trackEvent("lens_input",{inputType:draft.type,entryMode,categoryId:draft.categoryId??null,subcategoryId:draft.subcategoryId??null});
     window.location.assign("/advisor");
   }
 
@@ -216,7 +218,7 @@ export function DecisionStudio({
                 role="button"
                 tabIndex={0}
               >
-                <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => void onFileChange(event.target.files?.[0] ?? null)} />
+                <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif" hidden onChange={(event) => void onFileChange(event.target.files?.[0] ?? null)} />
                 {imageBusy ? (
                   <><LoaderCircle className="spin" size={30}/><strong>{ko ? "사진 준비 중" : "Preparing image"}</strong><span>{ko ? "업로드 전에 크기를 최적화합니다." : "Optimizing before upload."}</span></>
                 ) : preview ? (

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { usePreferences } from "@/components/preferences-provider";
 import type { DecisionAnswers, DecisionDraft, UserModelPayload } from "@/lib/buysor-types";
+import { trackEvent } from "@/lib/analytics-client";
 
 const steps = [
   {
@@ -170,6 +171,7 @@ export function AdvisorForm() {
       setStep((value) => value + 1);
       return;
     }
+    trackEvent("advisor_completed",{answered:steps.length,hasNote:Boolean(note.trim()),inputType:draft?.type??"unknown"});
     window.location.assign("/decision");
   }
 

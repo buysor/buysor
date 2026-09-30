@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { PreferencesProvider } from "@/components/preferences-provider";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="ko">
       <body className="antialiased">
         <PreferencesProvider>
+          <AnalyticsTracker />
           {children}
           <Toaster position="bottom-center" richColors />
         </PreferencesProvider>

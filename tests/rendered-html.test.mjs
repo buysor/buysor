@@ -29,6 +29,7 @@ test("renders production product metadata and working navigation", async () => {
     /^text\/html\b/i,
   );
   const html = await response.text();
+  assert.match(html, /<html[^>]*lang="en"[^>]*data-theme="light"/);
   assert.match(html, productMeta);
   assert.match(html, /<title>BUYSOR/);
   assert.match(html, /href="\/credits"/);
@@ -36,3 +37,4 @@ test("renders production product metadata and working navigation", async () => {
   assert.match(html, /id="decision-example"/);
   assert.doesNotMatch(html, /name="codex-preview"/);
 });
+

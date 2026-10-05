@@ -32,13 +32,15 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     try {
-    const savedTheme = localStorage.getItem("buysor-theme");
-    const savedLanguage = localStorage.getItem("buysor-language");
+    const savedTheme = sessionStorage.getItem("buysor-visit-theme-v1");
+    const savedLanguage = sessionStorage.getItem("buysor-visit-language-v1");
     if (savedTheme === "dark" || savedTheme === "light") setThemeState(savedTheme);
     if (savedLanguage === "ko" || savedLanguage === "en") setLanguageState(savedLanguage);
-    const savedMarket = localStorage.getItem('buysor-market');
-    if (isMarket(savedMarket)) setMarket(savedMarket);
-    } catch { /* A blocked storage policy still allows this session to work. */ }
+    } catch { /* Blocked session storage keeps the Light / English defaults. */ }
+    try {
+      const savedMarket = localStorage.getItem('buysor-market');
+      if (isMarket(savedMarket)) setMarket(savedMarket);
+    } catch { /* Shopping region remains independent of visit display settings. */ }
     setTimeZone(validTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone));
     setReady(true);
   }, []);
@@ -48,14 +50,14 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     document.documentElement.dataset.preferencesReady = "true";
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
-    try { localStorage.setItem("buysor-theme", theme); } catch {}
+    try { sessionStorage.setItem("buysor-visit-theme-v1", theme); } catch {}
   }, [theme, ready]);
 
   useEffect(() => {
     if (!ready) return;
     document.documentElement.lang = language;
     document.title = getPageTitle(pathname, language);
-    try { localStorage.setItem("buysor-language", language); } catch {}
+    try { sessionStorage.setItem("buysor-visit-language-v1", language); } catch {}
   }, [language, pathname, ready]);
 
   useEffect(() => { if (ready) { try { localStorage.setItem('buysor-market', market); } catch {} } }, [market, ready]);

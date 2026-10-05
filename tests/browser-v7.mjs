@@ -11,11 +11,15 @@ async function waitForPreferences(page,language='ko',theme='light'){
 }
 try{
  for(const width of [1440,768,390]){
-  const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1});
-  await context.addInitScript(()=>localStorage.setItem('buysor-language','ko'));
+  const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1,colorScheme:'dark'});
+  await context.addInitScript(()=>{localStorage.setItem('buysor-language','ko');localStorage.setItem('buysor-theme','dark');});
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('Browser error:',e.message);});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('#decision-example').waitFor();await page.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0));
-  await waitForPreferences(page);
+  await waitForPreferences(page,'en','light');
+  await page.getByRole('button',{name:'Menu',exact:true}).click();
+  await page.getByRole('button',{name:'Korean',exact:true}).click();
+  await waitForPreferences(page,'ko','light');
+  await page.getByRole('button',{name:'메뉴',exact:true}).click();
   const layout=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,images:[...document.images].map(i=>({src:i.currentSrc,ok:i.complete&&i.naturalWidth>0}))}));
   assert.ok(layout.width<=width+2,JSON.stringify(layout));assert.ok(layout.height>2200);assert.ok(layout.images.every(i=>i.ok));
   await page.screenshot({path:`${evidence}/home-${width}.png`,fullPage:true});
@@ -29,7 +33,8 @@ try{
   await page.getByRole('status').filter({hasText:'공개 준비 버전'}).waitFor({timeout:20000});
   assert.equal(await page.locator('main button:disabled').count(),1);assert.equal(await page.locator('main [class*="planCard"]').count(),1);
   await page.screenshot({path:`${evidence}/membership-${width}.png`,fullPage:true});
-  {await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForPreferences(page);await page.evaluate(()=>localStorage.setItem('buysor-theme','dark'));await page.reload({waitUntil:'domcontentloaded'});await waitForPreferences(page,'ko','dark');const dark=await page.evaluate(()=>{const hero=document.querySelector('main section');const frame=document.querySelector('[class*=frame]');const visible=[...frame.querySelectorAll('picture')].filter(p=>getComputedStyle(p).display!=='none');return {background:getComputedStyle(hero).backgroundColor,pictures:visible.map(p=>p.querySelector('img').currentSrc)};});assert.match(dark.background,/rgb\((?:[0-3]?\d),/);assert.equal(dark.pictures.length,1);assert.match(dark.pictures[0],/buysor-studio-dark-20260930/);await page.screenshot({path:`${evidence}/home-dark-${width}.png`,fullPage:true});}
+  {await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForPreferences(page);await page.getByRole('button',{name:'메뉴',exact:true}).click();await page.getByRole('button',{name:'다크 모드',exact:true}).click();await waitForPreferences(page,'ko','dark');await page.getByRole('button',{name:'메뉴',exact:true}).click();await page.reload({waitUntil:'domcontentloaded'});await waitForPreferences(page,'ko','dark');const dark=await page.evaluate(()=>{const hero=document.querySelector('main section');const frame=document.querySelector('[class*=frame]');const visible=[...frame.querySelectorAll('picture')].filter(p=>getComputedStyle(p).display!=='none');return {background:getComputedStyle(hero).backgroundColor,pictures:visible.map(p=>p.querySelector('img').currentSrc)};});assert.match(dark.background,/rgb\((?:[0-3]?\d),/);assert.equal(dark.pictures.length,1);assert.match(dark.pictures[0],/buysor-studio-dark-20260930/);await page.screenshot({path:`${evidence}/home-dark-${width}.png`,fullPage:true});}
+  const reopened=await context.newPage();await reopened.goto(origin,{waitUntil:'domcontentloaded'});await waitForPreferences(reopened,'en','light');await reopened.close();
   assert.deepEqual(errors,[]);results.push({width,layout,status:'passed'});await context.close();
  }
  const response=await fetch(origin+'/api/commerce/status');assert.equal(response.status,200);const status=await response.json();

@@ -43,6 +43,10 @@ try{
  const preview=await fetch(origin+'/api/subscription',{method:'POST'});assert.equal(preview.status,405);
  await writeFile(`${evidence}/results.json`,JSON.stringify({results,status,unauthenticatedDecision:denied.status,disabledTierSwitch:preview.status},null,2));
  console.log('Browser checks passed at 1440, 768 and 390 pixels; live billing/AI disabled and ready-state hydrated.');
+ const liveRateResponse=await fetch(origin+'/api/currency/rates');assert.equal(liveRateResponse.status,200);const liveRates=await liveRateResponse.json();
+ assert.ok(liveRates.snapshot,'A real published rate must be available for release verification: '+JSON.stringify(liveRates));assert.equal(liveRates.snapshot.base,'USD');assert.equal(liveRates.snapshot.source,'frankfurter-ecb');
+ for(const code of ['USD','GBP','CAD','AUD','NZD','KRW'])assert.ok(Number.isFinite(liveRates.snapshot.rates[code])&&liveRates.snapshot.rates[code]>0,code);
+ await writeFile(`${evidence}/live-rates.json`,JSON.stringify(liveRates,null,2));
  // Regression: persisted English, public surfaces, survey steps and help.
  // Fixtures prevent account changes, orders and credit charges.
  const localeResults=[];
@@ -132,4 +136,71 @@ try{
  }
  await writeFile(`${evidence}/locale-results.json`,JSON.stringify(localeResults,null,2));
  console.log('English UI, billing states, survey help, language switching and saved profiles passed at desktop and mobile widths.');
+
+ // Currency changes affect every service fee; outage recovery never changes the USD order.
+ const currencyResults=[];
+ for(const width of [1440,390]){
+  const context=await browser.newContext({viewport:{width,height:900}});
+  await context.addInitScript(()=>localStorage.setItem('buysor-market','KR'));
+  let mode='latest',rateCalls=0,orderBody=null;
+  const snapshot={version:1,base:'USD',source:'frankfurter-ecb',date:new Date().toISOString().slice(0,10),fetchedAt:Date.now(),rates:{USD:1,GBP:.75,CAD:1.4,AUD:1.5,NZD:1.65,KRW:1350}};
+  await context.route('**/api/**',async route=>{
+   const path=new URL(route.request().url()).pathname;let body={};let status=200;
+   if(path==='/api/currency/rates'){rateCalls++;if(mode==='offline'){await route.abort('failed');return;}body={status:'latest',snapshot};}
+   else if(path==='/api/auth/me')body={authenticated:true,user:{id:'fixture',email:'test@example.test'}};
+   else if(path==='/api/commerce/status')body={authenticated:true,checkoutReady:true,subscriptionReady:false,aiReady:false,balance:{available:0}};
+   else if(path==='/api/billing/history')body={items:[{id:'original-usd',credits:20,amount:219,currency:'USD',status:'paid'},{id:'original-krw',credits:20,amount:1900,currency:'KRW',status:'paid'}]};
+   else if(path==='/api/billing/order'){orderBody=route.request().postDataJSON();status=409;body={error:'Fixture checkout stopped before any payment.'};}
+   else if(path==='/api/billing/checkout')body={orderId:'fixture',status:'pending',amount:199,credits:20,clientToken:null};
+   await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
+  });
+  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.clock.install();
+  await page.goto(origin+'/pricing',{waitUntil:'domcontentloaded'});await waitForPreferences(page,'en');
+  await page.locator('[data-service-price="999"][data-price-currency="KRW"]').waitFor();
+  const expected={US:['USD','$9.99 USD'],GB:['GBP','≈ GBP £7.49'],CA:['CAD','≈ CAD CA$13.99'],AU:['AUD','≈ AUD A$14.99'],NZ:['NZD','≈ NZD NZ$16.48'],KR:['KRW','≈ KRW ₩13,487']};
+  const before=rateCalls;
+  for(const [region,[currency,text]] of Object.entries(expected)){
+   await page.locator('main').getByRole('combobox',{name:'Shopping region',exact:true}).selectOption(region);
+   await page.locator(`[data-service-price="999"][data-price-currency="${currency}"]`).waitFor();
+   assert.equal(await page.locator('[data-service-price="999"] > span').innerText(),text,region);
+  }
+  assert.equal(rateCalls,before,'Changing regions must not wait for another FX request');
+  await page.screenshot({path:`${evidence}/currency-membership-${width}.png`,fullPage:true});
+  for(const path of ['/','/credits','/guide','/billing/checkout?_ptxn=fixture']){
+   await page.goto(origin+path,{waitUntil:'domcontentloaded'});await waitForPreferences(page,'en');
+   await page.locator('[data-service-price][data-price-currency="KRW"]').first().waitFor();
+   const currencies=await page.locator('[data-service-price]').evaluateAll(elements=>elements.map(e=>e.dataset.priceCurrency));
+   assert.ok(currencies.length>0&&currencies.every(c=>c==='KRW'),path+JSON.stringify(currencies));
+   assert.ok((await page.locator('main').innerText()).includes('USD'),path+' actual charge disclosure');
+   const size=await page.evaluate(()=>({content:document.documentElement.scrollWidth,viewport:innerWidth}));assert.ok(size.content<=size.viewport+2,path+' overflow');
+  }
+  await page.goto(origin+'/credits',{waitUntil:'domcontentloaded'});await waitForPreferences(page,'en');
+  await page.locator('[data-service-price="199"][data-price-currency="KRW"]').waitFor();
+  await page.getByText('original-usd',{exact:false}).waitFor();assert.ok((await page.locator('main').innerText()).includes('$2.19'));assert.ok((await page.locator('main').innerText()).includes('₩1,900'));
+  await page.locator('main input[type="checkbox"]').first().check();
+  await page.getByRole('button',{name:'Pay $1.99 USD',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('[role="alert"]'));
+  assert.equal(orderBody.currency,'USD');assert.equal(orderBody.acceptedPrice,199);assert.equal(orderBody.productId,'pack20');
+  mode='offline';await page.reload({waitUntil:'domcontentloaded'});await waitForPreferences(page,'en');
+  await page.locator('[data-rate-status="cached"]').waitFor();
+  assert.equal(await page.locator('[data-service-price="199"] > span').innerText(),'≈ KRW ₩2,687');
+  await page.getByText('Using last available rates',{exact:false}).waitFor();
+  await page.screenshot({path:`${evidence}/currency-cached-${width}.png`,fullPage:true});
+  await page.evaluate(()=>localStorage.removeItem('buysor-reference-rates-v1'));
+  await page.reload({waitUntil:'domcontentloaded'});await waitForPreferences(page,'en');
+  await page.locator('[data-rate-status="unavailable"]').waitFor();
+  assert.equal(await page.locator('[data-service-price="199"] > span').innerText(),'$1.99 USD');
+  await page.locator('main').getByRole('combobox',{name:'Shopping region',exact:true}).selectOption('GB');
+  assert.equal(await page.locator('[data-service-price="199"]').getAttribute('data-price-currency'),'USD');
+  mode='latest';await page.clock.fastForward(5*60_000+1000);
+  await page.locator('[data-service-price="199"][data-price-currency="GBP"]').waitFor();
+  assert.equal(await page.locator('[data-service-price="199"] > span').innerText(),'≈ GBP £1.49');
+  await page.getByRole('button',{name:'Menu',exact:true}).click();await page.getByRole('button',{name:'Korean',exact:true}).click();await waitForPreferences(page,'ko');
+  await page.getByRole('button',{name:'메뉴',exact:true}).click();
+  assert.equal(await page.locator('[data-service-price="199"]').getAttribute('data-price-currency'),'GBP');
+  assert.deepEqual(errors,[]);currencyResults.push({width,status:'passed',rateCalls,canonicalOrder:orderBody});await context.close();
+ }
+ await writeFile(`${evidence}/currency-results.json`,JSON.stringify(currencyResults,null,2));
+ console.log('Currency conversion, all six regions, USD consent, historical receipts, outage fallback and automatic recovery passed at desktop and mobile widths.');
 }finally{await browser.close();}

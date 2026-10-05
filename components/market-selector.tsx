@@ -8,6 +8,6 @@ export function MarketSelector({ compact = false }: { compact?: boolean }) {
     <select aria-label={ko ? '제품을 구매할 지역' : 'Shopping region'} value={market} onChange={event => { if (isMarket(event.target.value)) setMarket(event.target.value); }} style={{ width: '100%', minHeight: 40, padding: '0 10px', border: '1px solid var(--line)', borderRadius: 10, color: 'var(--ink)', background: 'var(--surface)' }}>
       {Object.entries(MARKETS).map(([key, value]) => <option key={key} value={key}>{ko ? value.ko : value.name} · {value.currency}</option>)}
     </select>
-    {!compact ? <small>{ko ? '제품 예산·지역별 보증과 호환성에 적용됩니다. BUYSOR 요금은 USD입니다.' : 'Used for product budgets, regional warranty and compatibility. BUYSOR prices are in USD.'}</small> : null}
+    {!compact ? <small>{ko ? '제품 예산과 요금 표시 통화, 지역별 보증·호환성에 적용됩니다.' : 'Sets product budgets, the currency used to display prices, regional warranty and compatibility.'}</small> : null}
   </label>;
 }

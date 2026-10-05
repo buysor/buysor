@@ -5,6 +5,7 @@ import s from './commerce.module.css';
 import {usePreferences} from '@/components/preferences-provider';
 import {trackEvent} from '@/lib/analytics-client';
 import {formatMoney, type Currency} from '@/lib/market';
+import {useServicePricing} from './currency-pricing';
 import {localizeError} from '@/lib/ui-locale';
 type Status={authenticated:boolean;checkoutReady:boolean;subscriptionReady:boolean;aiReady:boolean;balance:{available:number}|null};
 export function useCommerce(){
@@ -16,7 +17,7 @@ export function useCommerce(){
  return {data,error:error?(language==='ko'?'상태를 확인하지 못했습니다.':'Could not check service status.'):''};
 }
 export function CheckoutButton({productId}:{productId:string}){
- const {language}=usePreferences();const ko=language==='ko';
+ const {language}=usePreferences();const ko=language==='ko';const {price}=useServicePricing();
  const {data,error}=useCommerce();const [consent,setConsent]=useState(false);const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');const lock=useRef(false);
  const product=CREDIT_PACKS.find(p=>p.id===productId);if(!product)return null;
  async function start(){
@@ -28,8 +29,8 @@ export function CheckoutButton({productId}:{productId:string}){
   catch(e){setMessage(e instanceof Error?e.message:(ko?'잠시 후 다시 시도해 주세요.':'Please try again shortly.'));lock.current=false;setBusy(false);}
  }
  return <div className={s.checkout}>
-  {data?.checkoutReady?<label><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>{ko?`${formatUSD(product.price, language)} 단건 결제와 사용권 가이드를 확인했습니다.`:`I reviewed the ${formatUSD(product.price, language)} one-time purchase and credit policy.`}</span></label>:null}
-  <button type="button" disabled={!data?.checkoutReady||busy||!consent} onClick={start}>{busy?(ko?'결제창 연결 중':'Opening checkout'):!data?(ko?'연결 확인 중':'Checking'):!data.checkoutReady?(ko?'결제 준비 중':'Checkout preparing'):data.authenticated?(ko?`${formatUSD(product.price, language)} 결제`:`Pay ${formatUSD(product.price, language)}`):(ko?'로그인 후 결제':'Sign in to pay')}</button>
+  {data?.checkoutReady?<label><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>{ko?`${price(product.price)} 표시 가격과 ${formatUSD(product.price, language)} USD 단건 결제(세금 별도), 사용권 가이드를 확인했습니다.`:`I reviewed the displayed ${price(product.price)} estimate, the ${formatUSD(product.price, language)} USD one-time charge (plus tax) and credit policy.`}</span></label>:null}
+  <button type="button" disabled={!data?.checkoutReady||busy||!consent} onClick={start}>{busy?(ko?'결제창 연결 중':'Opening checkout'):!data?(ko?'연결 확인 중':'Checking'):!data.checkoutReady?(ko?'결제 준비 중':'Checkout preparing'):data.authenticated?(ko?`${formatUSD(product.price, language)} USD 결제`:`Pay ${formatUSD(product.price, language)} USD`):(ko?'로그인 후 결제':'Sign in to pay')}</button>
   {(message||error)?<p role="alert">{localizeError(message||error,language,ko?"결제창을 열지 못했습니다.":"Could not open checkout.")}</p>:null}
  </div>;
 }

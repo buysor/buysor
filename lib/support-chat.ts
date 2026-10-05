@@ -1,15 +1,19 @@
+import { servicePrice, type RateSnapshot } from './exchange-rates';
+import type { Currency } from './market';
 import {FEATURES,USD_MEMBERSHIP as MEMBERSHIP,formatUSD} from './commerce-policy';
 export type SupportHistoryMessage={role:'user'|'assistant';content:string};
 export type SupportReply={reply:string;handoffSuggested:boolean;suggestedQuestions:string[]};
 /** Public support is an explicit help guide, not an unmetered paid-model proxy. */
-export function answerSupportFaq(message:string,language:'ko'|'en'='en'): SupportReply {
+export function answerSupportFaq(message:string,language:'ko'|'en'='en', pricing?:{currency:Currency;snapshot:RateSnapshot|null}): SupportReply {
  const ko=language==='ko';
+ const price=servicePrice(MEMBERSHIP.price,pricing?.currency??'USD',language,pricing?.snapshot??null).text;
+ const charge=`${formatUSD(MEMBERSHIP.price,language)} USD`;
  const s=message.trim().toLowerCase();
  let reply=ko?'사용법, 크레딧, 로그인, 환불 문의를 안내합니다. 개별 계정이나 결제내역은 이 채팅에서 조회하지 않습니다.':'I can explain usage, credits, sign-in and refunds. This chat does not access individual account or payment records.';
  let handoffSuggested=false;
- if(/currency|dollar|usd|tax|vat|통화|달러|세금|지역|region/.test(s))reply=ko?'BUYSOR 요금은 USD 기준이며 세금과 최종 금액은 결제창에서 확인합니다. 제품 예산은 설정에서 선택한 구매 지역의 통화를 사용하며 표시 언어와는 별개입니다. 카드사의 환전 수수료가 적용될 수 있습니다.':'BUYSOR prices are in USD. Applicable tax and the final total are shown at checkout; your bank may charge currency conversion fees. Product budgets use your selected shopping region, independently of display language.';
+ if(/currency|dollar|usd|tax|vat|통화|달러|세금|지역|region/.test(s))reply=ko?'BUYSOR 요금은 선택한 지역의 통화로 환산해 표시합니다. 환율은 영업일마다 갱신되는 ECB 기준값이며 기준일을 요금 페이지에서 확인할 수 있습니다. 실제 결제는 USD로 진행하며 세금과 최종 금액은 결제창에서 확인합니다. 제품 예산은 설정에서 선택한 구매 지역의 통화를 사용하며 표시 언어와는 별개입니다. 카드사의 환전 수수료가 적용될 수 있습니다.':'BUYSOR prices are converted to your selected region’s currency using daily ECB reference rates. The pricing pages show the rate date. Checkout charges USD; applicable tax and the final total are shown there; your bank may charge currency conversion fees. Product budgets use your selected shopping region, independently of display language.';
  else if(/크레딧|credit|charge|차감|출석|attendance|가입|signup|룰렛|roulette/.test(s)) reply=ko?`가입·출석·룰렛 자동 보상은 0C입니다. 표준 구매판단은 ${FEATURES.standard.credits}C이며 해당 건의 사진 해석을 포함합니다. 실행 전 사용량을 확인하고, 실패한 요청의 사용권은 복원합니다. 기본 탐색과 기록 조회는 무료입니다.`:`Automatic sign-up, attendance and roulette rewards are 0C. A standard purchase decision costs ${FEATURES.standard.credits}C and includes photo interpretation for that decision. Usage is shown before execution, and failed requests restore reserved credits. Basic browsing and history viewing are free.`;
- else if(/구독|subscription|멤버|member|결제|payment|요금|price/.test(s))reply=ko?`소액 팩과 선택형 멤버십을 분리합니다. 멤버십 계획은 월 ${formatUSD(MEMBERSHIP.price, language)} / ${MEMBERSHIP.credits}C이며 무제한이 아닙니다. 실제 판매 여부는 결제 페이지에 표시됩니다.`:`Credit packs and optional membership are separate. The membership plan is ${formatUSD(MEMBERSHIP.price, language)} / ${MEMBERSHIP.credits}C per month and is not unlimited. The billing page shows whether sales are currently enabled.`;
+ else if(/구독|subscription|멤버|member|결제|payment|요금|price/.test(s))reply=ko?`소액 팩과 선택형 멤버십을 분리합니다. 멤버십 계획은 월 ${price} / ${MEMBERSHIP.credits}C이며 무제한이 아닙니다. 결제 기준은 월 ${charge}(세금 별도)이며 환산 가격은 참고용입니다. 실제 판매 여부는 결제 페이지에 표시됩니다.`:`Credit packs and optional membership are separate. The membership plan is ${price} / ${MEMBERSHIP.credits}C per month and is not unlimited. The charge is ${charge} per month, plus tax; converted prices are estimates. The billing page shows whether sales are currently enabled.`;
  else if(/로그인|login|sign.?in|계정|account/.test(s))reply=ko?'결제한 것과 같은 Google 계정으로 로그인해 주세요. 비밀번호나 인증코드는 문의에 넣지 마세요.':'Sign in with the same Google account used for payment. Never include passwords or verification codes in support messages.';
  else if(/lens|사진|photo|구매|purchase|판단|decision/.test(s))reply=ko?'Lens에서 사진·링크·제품명을 입력하고 예산과 용도를 알려주세요. 실제 구매판단은 최신 웹 근거를 필요에 따라 확인하며 BUY · WAIT · SKIP으로 정리합니다.':'Start in Lens with a photo, link or product name, then add budget and use. The actual decision can verify current web evidence when needed and returns BUY · WAIT · SKIP.';
  if(/환불|refund|오류|error|중복|duplicate|취소|cancel|안돼|안 돼/.test(s)){handoffSuggested=true;reply+=ko?' 문의 시 주문번호와 오류 발생 시간을 남겨 주세요. 카드번호나 인증정보는 보내지 마세요.':' Include the order number and time of the error. Do not send full card numbers or authentication secrets.';}

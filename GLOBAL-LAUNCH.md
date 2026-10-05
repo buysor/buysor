@@ -2,7 +2,11 @@
 
 Each new visit starts in English and Light, including browsers with old saved dark/Korean preferences. Display choices made during a visit stay in that tab through navigation and refresh; a new tab starts with the defaults. Shopping region and profile data remain saved independently. Display language and shopping region are independent: US (default), UK, Canada, Australia, New Zealand and South Korea. Budgets use regional currency, and US/UK driving questions use miles. Saved won budgets and kilometer answers retain their original meaning. Region ranges are product budget choices, not exchange-rate conversions.
 
-BUYSOR fees are USD in both languages, plus applicable checkout tax:
+Canonical BUYSOR charges are USD, plus applicable checkout tax. Service prices on home, credits, membership, guide, support and checkout display an approximate conversion in the selected shopping region’s currency. Changing language does not change currency. Historical receipts retain their original charge currency.
+
+Conversions use the latest published ECB reference rates through [Frankfurter](https://frankfurter.dev/), refreshed at most every 30 minutes on the server. These are daily business-day reference rates, not intraday trading quotes. The browser retries automatically, resumes when online/visible, and shares one rate snapshot across all prices. Server and browser retain validated last-good observations for at most seven days; a failed refresh is labeled cached. If no valid rates exist, prices remain explicitly labeled USD. Fetches and cache operations have deadlines, and currency selection never waits for a request. All amounts shown at checkout consent still use the canonical USD cents; FX estimates never enter order/refund validation.
+
+Base prices:
 
 | Product | Price | Credits |
 | --- | ---: | ---: |

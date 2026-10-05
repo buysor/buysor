@@ -12,10 +12,12 @@ async function waitForPreferences(page,language='ko',theme='light'){
 try{
  for(const width of [1440,768,390]){
   const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1,colorScheme:'dark'});
-  await context.addInitScript(()=>{localStorage.setItem('buysor-language','ko');localStorage.setItem('buysor-theme','dark');});
+  await context.addInitScript(()=>{localStorage.setItem('buysor-language','ko');localStorage.setItem('buysor-theme','dark');localStorage.setItem('buysor-market','KR');});
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('Browser error:',e.message);});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('#decision-example').waitFor();await page.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0));
   await waitForPreferences(page,'en','light');
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem('buysor-visit-market-v1')),'US');
+  assert.ok((await page.locator('[data-service-price]').evaluateAll(elements=>elements.map(e=>e.dataset.priceCurrency))).every(currency=>currency==='USD'));
   await page.getByRole('button',{name:'Menu',exact:true}).click();
   await page.getByRole('button',{name:'Korean',exact:true}).click();
   await waitForPreferences(page,'ko','light');
@@ -34,7 +36,7 @@ try{
   assert.equal(await page.locator('main button:disabled').count(),1);assert.equal(await page.locator('main [class*="planCard"]').count(),1);
   await page.screenshot({path:`${evidence}/membership-${width}.png`,fullPage:true});
   {await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForPreferences(page);await page.getByRole('button',{name:'메뉴',exact:true}).click();await page.getByRole('button',{name:'다크 모드',exact:true}).click();await waitForPreferences(page,'ko','dark');await page.getByRole('button',{name:'메뉴',exact:true}).click();await page.reload({waitUntil:'domcontentloaded'});await waitForPreferences(page,'ko','dark');const dark=await page.evaluate(()=>{const hero=document.querySelector('main section');const frame=document.querySelector('[class*=frame]');const visible=[...frame.querySelectorAll('picture')].filter(p=>getComputedStyle(p).display!=='none');return {background:getComputedStyle(hero).backgroundColor,pictures:visible.map(p=>p.querySelector('img').currentSrc)};});assert.match(dark.background,/rgb\((?:[0-3]?\d),/);assert.equal(dark.pictures.length,1);assert.match(dark.pictures[0],/buysor-studio-dark-20260930/);await page.screenshot({path:`${evidence}/home-dark-${width}.png`,fullPage:true});}
-  const reopened=await context.newPage();await reopened.goto(origin,{waitUntil:'domcontentloaded'});await waitForPreferences(reopened,'en','light');await reopened.close();
+  const reopened=await context.newPage();await reopened.goto(origin,{waitUntil:'domcontentloaded'});await waitForPreferences(reopened,'en','light');assert.equal(await reopened.evaluate(()=>sessionStorage.getItem('buysor-visit-market-v1')),'US');assert.ok((await reopened.locator('[data-service-price]').evaluateAll(elements=>elements.map(e=>e.dataset.priceCurrency))).every(currency=>currency==='USD'));await reopened.close();
   assert.deepEqual(errors,[]);results.push({width,layout,status:'passed'});await context.close();
  }
  const response=await fetch(origin+'/api/commerce/status');assert.equal(response.status,200);const status=await response.json();
@@ -101,7 +103,7 @@ try{
   await page.getByRole('button',{name:'Menu',exact:true}).click();
   await page.reload({waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Work · study',exact:true}).waitFor();
-  assert.equal(await page.evaluate(()=>localStorage.getItem('buysor-market')),'GB');
+  assert.equal(await page.evaluate(()=>sessionStorage.getItem('buysor-visit-market-v1')),'GB');
   await page.goto(origin+'/profile?tab=survey',{waitUntil:'domcontentloaded'});
   await page.getByRole('button',{name:'Next',exact:true}).waitFor();
   await checkEnglish('survey traits');
@@ -141,7 +143,7 @@ try{
  const currencyResults=[];
  for(const width of [1440,390]){
   const context=await browser.newContext({viewport:{width,height:900}});
-  await context.addInitScript(()=>localStorage.setItem('buysor-market','KR'));
+  await context.addInitScript(()=>{localStorage.setItem('buysor-market','KR');localStorage.setItem('buysor-language','ko');});
   let mode='latest',rateCalls=0,orderBody=null;
   const snapshot={version:1,base:'USD',source:'frankfurter-ecb',date:new Date().toISOString().slice(0,10),fetchedAt:Date.now(),rates:{USD:1,GBP:.75,CAD:1.4,AUD:1.5,NZD:1.65,KRW:1350}};
   await context.route('**/api/**',async route=>{
@@ -157,6 +159,9 @@ try{
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.clock.install();
   await page.goto(origin+'/pricing',{waitUntil:'domcontentloaded'});await waitForPreferences(page,'en');
+  await page.locator('[data-service-price="999"][data-price-currency="USD"]').waitFor();
+  assert.equal(await page.locator('main').getByRole('combobox',{name:'Shopping region',exact:true}).inputValue(),'US');
+  await page.locator('main').getByRole('combobox',{name:'Shopping region',exact:true}).selectOption('KR');
   await page.locator('[data-service-price="999"][data-price-currency="KRW"]').waitFor();
   const expected={US:['USD','$9.99 USD'],GB:['GBP','≈ GBP £7.49'],CA:['CAD','≈ CAD CA$13.99'],AU:['AUD','≈ AUD A$14.99'],NZ:['NZD','≈ NZD NZ$16.48'],KR:['KRW','≈ KRW ₩13,487']};
   const before=rateCalls;
@@ -199,6 +204,11 @@ try{
   await page.getByRole('button',{name:'Menu',exact:true}).click();await page.getByRole('button',{name:'Korean',exact:true}).click();await waitForPreferences(page,'ko');
   await page.getByRole('button',{name:'메뉴',exact:true}).click();
   assert.equal(await page.locator('[data-service-price="199"]').getAttribute('data-price-currency'),'GBP');
+  const fresh=await context.newPage();await fresh.goto(origin+'/pricing',{waitUntil:'domcontentloaded'});await waitForPreferences(fresh,'en','light');
+  await fresh.locator('[data-service-price="999"][data-price-currency="USD"]').waitFor();
+  assert.equal(await fresh.locator('main').getByRole('combobox',{name:'Shopping region',exact:true}).inputValue(),'US');
+  assert.equal(await fresh.locator('[data-service-price="999"] > span').innerText(),'$9.99 USD');
+  await fresh.close();
   assert.deepEqual(errors,[]);currencyResults.push({width,status:'passed',rateCalls,canonicalOrder:orderBody});await context.close();
  }
  await writeFile(`${evidence}/currency-results.json`,JSON.stringify(currencyResults,null,2));

@@ -32,15 +32,13 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     try {
-    const savedTheme = sessionStorage.getItem("buysor-visit-theme-v1");
-    const savedLanguage = sessionStorage.getItem("buysor-visit-language-v1");
-    if (savedTheme === "dark" || savedTheme === "light") setThemeState(savedTheme);
-    if (savedLanguage === "ko" || savedLanguage === "en") setLanguageState(savedLanguage);
-    } catch { /* Blocked session storage keeps the Light / English defaults. */ }
-    try {
-      const savedMarket = localStorage.getItem('buysor-market');
+      const savedTheme = sessionStorage.getItem("buysor-visit-theme-v1");
+      const savedLanguage = sessionStorage.getItem("buysor-visit-language-v1");
+      const savedMarket = sessionStorage.getItem('buysor-visit-market-v1');
+      if (savedTheme === "dark" || savedTheme === "light") setThemeState(savedTheme);
+      if (savedLanguage === "ko" || savedLanguage === "en") setLanguageState(savedLanguage);
       if (isMarket(savedMarket)) setMarket(savedMarket);
-    } catch { /* Shopping region remains independent of visit display settings. */ }
+    } catch { /* Blocked session storage keeps the Light / English / US defaults. */ }
     setTimeZone(validTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone));
     setReady(true);
   }, []);
@@ -60,7 +58,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     try { sessionStorage.setItem("buysor-visit-language-v1", language); } catch {}
   }, [language, pathname, ready]);
 
-  useEffect(() => { if (ready) { try { localStorage.setItem('buysor-market', market); } catch {} } }, [market, ready]);
+  useEffect(() => { if (ready) { try { sessionStorage.setItem('buysor-visit-market-v1', market); } catch {} } }, [market, ready]);
 
   const value = useMemo(
     () => ({ theme, language, market, currency: MARKETS[market].currency, timeZone, ready, setMarket, setTheme: setThemeState, setLanguage: setLanguageState }),

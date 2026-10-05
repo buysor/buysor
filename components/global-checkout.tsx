@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { SiteShell } from './site-shell';
 import { usePreferences } from './preferences-provider';
 import { localizeError } from '@/lib/ui-locale';
-import { formatUSD } from '@/lib/commerce-policy';
+import { ServicePrice, ExchangeRateNotice } from './currency-pricing';
 import styles from './commerce.module.css';
 type Paddle = { Initialize(options:unknown):void; Checkout:{open(options:unknown):void} };
 declare global { interface Window { Paddle?: Paddle } }
@@ -40,7 +40,7 @@ export function GlobalCheckout() {
     }catch(reason){setError(reason instanceof Error?reason.message:(ko?'결제창을 열지 못했습니다.':'Could not open checkout.'));}finally{setBusy(false);}
   }
   return <SiteShell compact><main className={styles.return}><h1>{ko?'안전한 결제':'Secure checkout'}</h1>
-    {quote?<><p>{quote.credits}C · {formatUSD(quote.amount,language)} USD</p><p>{ko?'해당 국가의 세금과 최종 결제 금액은 결제창에서 확인하세요.':'Review applicable tax and the final total in checkout.'}</p><button type="button" disabled={busy} onClick={()=>void open()}>{busy?(ko?'연결 중':'Opening checkout'):(ko?'결제창 열기':'Open checkout')}</button></>:!error?<p>{ko?'주문 확인 중':'Checking your order…'}</p>:null}
+    {quote?<><ExchangeRateNotice/><p>{quote.credits}C · <ServicePrice cents={quote.amount} showCharge/></p><p>{ko?'해당 국가의 세금과 최종 결제 금액은 결제창에서 확인하세요.':'Review applicable tax and the final total in checkout.'}</p><button type="button" disabled={busy} onClick={()=>void open()}>{busy?(ko?'연결 중':'Opening checkout'):(ko?'결제창 열기':'Open checkout')}</button></>:!error?<p>{ko?'주문 확인 중':'Checking your order…'}</p>:null}
     {error?<p role="alert">{localizeError(error,language,ko?'결제창을 확인하지 못했습니다.':'Could not open checkout.')}</p>:null}<a href="/credits">{ko?'크레딧으로 돌아가기':'Back to credits'}</a><a href="/support">{ko?'고객지원':'Contact support'}</a>
   </main></SiteShell>;
 }

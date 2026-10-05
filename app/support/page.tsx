@@ -5,6 +5,7 @@ import { Bot, Mail, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react"
 import { SiteShell } from "@/components/site-shell";
 import { usePreferences } from "@/components/preferences-provider";
 import styles from "./support.module.css";
+import { ExchangeRateNotice } from "@/components/currency-pricing";
 import { localizeError } from "@/lib/ui-locale";
 
 type ChatMessage = {
@@ -34,7 +35,7 @@ const initialSuggestions = [
 ];
 
 export default function SupportPage() {
-  const { language } = usePreferences();
+  const { language, currency } = usePreferences();
   const ko = language === "ko";
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const greeting = ko ? initialMessages[0] : {role: "assistant" as const, content: "Hello. BUYSOR Support can help with credits, sign-in, Lens, purchase-decision usage and error reports."};
@@ -62,7 +63,7 @@ export default function SupportPage() {
         body: JSON.stringify({
           message,
           history: history.slice(0, -1),
-          language,
+          language, currency,
         }),
       });
       const body = await response.json() as ApiReply;
@@ -106,7 +107,7 @@ export default function SupportPage() {
           </div>
         </section>
 
-        <p style={{color:"var(--muted)",fontSize:13}}>{ko?"BUYSOR 요금은 USD 기준이며 세금과 최종 금액은 결제창에서 확인합니다. 제품 예산은 선택한 구매 지역의 통화를 사용합니다.":"BUYSOR prices are in USD. Review applicable tax and the final total at checkout. Product budgets use the currency of your selected shopping region."}</p>
+        <ExchangeRateNotice/>
         <section className={styles.grid}>
           <aside className={styles.sidebar}>
             <h2>{ko?"상담 항목":"Help topics"}</h2>

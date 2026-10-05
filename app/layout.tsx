@@ -23,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('buysor-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light';document.documentElement.style.colorScheme=t==='dark'?'dark':'light';var l=localStorage.getItem('buysor-language');document.documentElement.lang=l==='ko'?'ko':'en'}catch(e){}` }} /></head>
+    <html lang="en" data-theme="light" style={{ colorScheme: "light" }} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: `try{var t=sessionStorage.getItem('buysor-visit-theme-v1');document.documentElement.dataset.theme=t==='dark'?'dark':'light';document.documentElement.style.colorScheme=t==='dark'?'dark':'light';var l=sessionStorage.getItem('buysor-visit-language-v1');document.documentElement.lang=l==='ko'?'ko':'en'}catch(e){}` }} /></head>
       <body className="antialiased">
         <PreferencesProvider>
           <AnalyticsTracker />

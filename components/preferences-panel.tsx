@@ -13,7 +13,7 @@ export function PreferencesPanel() {
       <div className="preferences-heading">
         <span className="section-kicker"><Settings2 aria-hidden="true" size={14} /> {ko ? "개인 설정" : "PREFERENCES"}</span>
         <h2 id="preferences-title">{ko ? "내 화면 설정" : "Make it yours"}</h2>
-        <p>{ko ? "선택한 설정은 이 기기에 자동 저장됩니다." : "Your choices are saved on this device."}</p>
+        <p>{ko ? "새 방문은 영어·밝은 모드로 시작하며, 이용 중 선택한 화면과 언어는 유지됩니다." : "New visits start in English and Light. Your display choices stay for this visit."}</p>
       </div>
 
       <div className="preference-groups">

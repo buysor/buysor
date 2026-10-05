@@ -1,6 +1,6 @@
 # English-first BUYSOR launch
 
-English is the default for a new browser. A previously selected Korean language remains selected. Display language and shopping region are independent: US (default), UK, Canada, Australia, New Zealand and South Korea. Budgets use regional currency, and US/UK driving questions use miles. Saved won budgets and kilometer answers retain their original meaning. Region ranges are product budget choices, not exchange-rate conversions.
+Each new visit starts in English and Light, including browsers with old saved dark/Korean preferences. Display choices made during a visit stay in that tab through navigation and refresh; a new tab starts with the defaults. Shopping region and profile data remain saved independently. Display language and shopping region are independent: US (default), UK, Canada, Australia, New Zealand and South Korea. Budgets use regional currency, and US/UK driving questions use miles. Saved won budgets and kilometer answers retain their original meaning. Region ranges are product budget choices, not exchange-rate conversions.
 
 BUYSOR fees are USD in both languages, plus applicable checkout tax:
 
